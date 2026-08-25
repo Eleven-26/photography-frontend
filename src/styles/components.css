@@ -1,0 +1,403 @@
+/* ───────── 按钮 ───────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--orange);
+  color: var(--ink);
+}
+
+.btn-primary:hover {
+  background: var(--orange-dark);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(233, 138, 75, 0.35);
+}
+
+.btn-dark {
+  background: var(--ink);
+  color: #fff;
+}
+
+.btn-dark:hover {
+  background: #29424b;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-2);
+}
+
+.btn-ghost:hover {
+  background: var(--cream);
+}
+
+.btn-outline {
+  background: var(--white);
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+}
+
+.btn-outline:hover {
+  border-color: var(--orange);
+  color: var(--orange-dark);
+  background: #fff7ef;
+}
+
+.btn-sm {
+  padding: 6px 11px;
+  font-size: 11px;
+  border-radius: 9px;
+}
+
+.btn-danger-ghost {
+  color: var(--red-dark);
+  background: #fdf1ef;
+}
+
+.btn-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: var(--white);
+  border-radius: 10px;
+  color: var(--ink-2);
+}
+
+.btn-icon:hover {
+  border-color: var(--orange);
+  color: var(--orange-dark);
+}
+
+/* ───────── 统计卡 ───────── */
+.stats-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stats-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.stats-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 17px 19px;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.stat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.stat-icon .icon {
+  width: 17px;
+  height: 17px;
+}
+
+.tone-orange {
+  background: #fdeadd;
+  color: var(--orange-dark);
+}
+
+.tone-mint {
+  background: var(--mint);
+  color: var(--mint-dark);
+}
+
+.tone-lav {
+  background: var(--lav);
+  color: var(--lav-dark);
+}
+
+.tone-yellow {
+  background: var(--yellow);
+  color: #8a711b;
+}
+
+.tone-gray {
+  background: #edeeea;
+  color: var(--ink-2);
+}
+
+.tone-red {
+  background: #f9dcd8;
+  color: var(--red-dark);
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-top: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+
+.stat-sub .up {
+  color: var(--mint-dark);
+  font-weight: 700;
+}
+
+.trend-delta {
+  font: 700 11px 'DM Sans', sans-serif;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
+/* ───────── 表格 ───────── */
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 680px;
+}
+
+.table th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  background: #fbfaf6;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.table td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background: #fdfaf3;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.cell-main {
+  font-weight: 700;
+  display: block;
+}
+
+.cell-sub {
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 2px;
+  display: block;
+}
+
+/* ───────── 状态徽章 / pill ───────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 30px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+.status-active {
+  background: var(--mint);
+  color: var(--mint-dark);
+}
+
+.status-settle {
+  background: var(--mint);
+  color: var(--mint-dark);
+}
+
+.status-complete {
+  background: var(--mint);
+  color: var(--mint-dark);
+}
+
+.status-ok,
+.status-approved {
+  background: var(--mint);
+  color: var(--mint-dark);
+}
+
+.status-draft,
+.status-pending,
+.status-processing,
+.status-paid {
+  background: var(--yellow);
+  color: #8a711b;
+}
+
+.status-error,
+.status-overdue,
+.status-cancelled,
+.status-rejected {
+  background: #f9dcd8;
+  color: var(--red-dark);
+}
+
+.status-disabled,
+.status-closed,
+.status-paused {
+  background: #edeeea;
+  color: var(--ink-2);
+}
+
+.status-info,
+.status-ship,
+.status-default {
+  background: var(--lav);
+  color: var(--lav-dark);
+}
+
+.status-hide,
+.status-archived {
+  background: #edeeea;
+  color: var(--muted);
+}
+
+.pill .icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* ───────── 通用小件 ───────── */
+.tag {
+  display: inline-block;
+  padding: 2px 7px;
+  background: var(--cream);
+  color: var(--ink-2);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.money-up {
+  color: var(--mint-dark);
+  font-weight: 700;
+}
+
+.money-down {
+  color: var(--red-dark);
+  font-weight: 700;
+}
+
+.stage-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-size: 10px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.stage-track .stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.stage-track .stage.done {
+  color: var(--mint-dark);
+  font-weight: 700;
+}
+
+.stage-track .stage.current {
+  background: var(--yellow);
+  color: #8a711b;
+  font-weight: 700;
+}
+
+.avatar-stack {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-stack .avatar {
+  border: 2px solid var(--white);
+  margin-left: -8px;
+}
+
+.avatar-stack .avatar:first-child {
+  margin-left: 0;
+}
+
+.divider {
+  height: 1px;
+  background: var(--line);
+  margin: 14px 0;
+}
+
+.list-slim li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 12px;
+}
+
+.list-slim li:last-child {
+  border-bottom: 0;
+}
+
+.list-slim .muted {
+  color: var(--muted);
+  font-size: 11px;
+}

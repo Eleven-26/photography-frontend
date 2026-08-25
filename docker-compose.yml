@@ -1,0 +1,39 @@
+# SLOT 摄影师工作室后台 — 前端容器编排
+# 前后端分离：frontend（Nginx 托管 Vue3 静态资源） + backend（Go · Gin API）
+#
+# 用法：
+#   docker compose up -d --build
+#   浏览器访问 http://localhost:8383
+#   后端 API 通过 nginx 的 /api 路径代理转到 backend:8080
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: slot-admin-frontend
+    restart: unless-stopped
+    ports:
+      - "8383:80"
+    depends_on:
+      - backend
+    networks:
+      - slot-net
+
+  backend:
+    # 后端为独立项目（D:\www\photography）。二选一：
+    #   方案 A：由 ../photography 源码构建（需后端项目含 Dockerfile）
+    #   方案 B：使用已发布的后端镜像
+    image: slot-admin-backend:latest
+    # build:
+    #   context: ../photography
+    #   dockerfile: Dockerfile
+    container_name: slot-admin-backend
+    restart: unless-stopped
+    env_file:
+      - ../photography/.env
+    networks:
+      - slot-net
+
+networks:
+  slot-net:
+    driver: bridge

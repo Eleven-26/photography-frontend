@@ -1,0 +1,29 @@
+{
+  "name": "photography-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "SLOT 摄影师工作室后台管理前端（Vue3 + TypeScript + 组合式 API）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "docker:build": "docker build -t slot-admin-frontend:latest .",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "pinia": "^3.0.1",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "typescript": "~5.6.3",
+    "vite": "^6.0.7",
+    "vue-tsc": "^2.2.0"
+  }
+}

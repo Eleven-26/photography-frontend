@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@600;700&display=swap');
+
+:root {
+  --ink: #17252b;
+  --ink-2: #405058;
+  --muted: #7e8b8d;
+  --line: #e7e4de;
+  --line-2: #d9d8d2;
+  --paper: #f7f5f0;
+  --white: #fffefa;
+  --cream: #efe8dc;
+  --orange: #e98a4b;
+  --orange-dark: #be6332;
+  --mint: #cfe7dd;
+  --mint-dark: #397967;
+  --lav: #e5def2;
+  --lav-dark: #6f5d94;
+  --yellow: #f4e7a9;
+  --red: #e56f66;
+  --red-dark: #a54f48;
+  --shadow: 0 18px 48px rgba(25, 34, 37, 0.08);
+  --shadow-sm: 0 5px 18px rgba(25, 34, 37, 0.06);
+  --radius: 18px;
+  --sidebar: 248px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+  background: none;
+}
+
+a {
+  color: var(--orange-dark);
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(233, 138, 75, 0.45);
+  outline-offset: 2px;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+}
+
+.main-area {
+  margin-left: var(--sidebar);
+  min-width: 0;
+  width: calc(100% - var(--sidebar));
+  transition: margin-left 0.25s ease;
+}
+
+.page-wrap {
+  padding: 26px 32px 52px;
+  max-width: 1680px;
+  margin: auto;
+}
