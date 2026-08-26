@@ -268,10 +268,11 @@ async function doAudit(approved: boolean) {
           <label class="field-label">备注</label>
           <textarea v-model="confirmNote" class="textarea" placeholder="如 金额一致，已确认到账"></textarea>
         </div>
-        <div class="flex gap-6 mt-16">
-          <button class="btn btn-primary" style="flex: 1" @click="doConfirm()">确认到账</button>
-        </div>
       </div>
+      <template #foot>
+        <button class="btn btn-ghost" @click="confirming = null">取消</button>
+        <button class="btn btn-primary" @click="doConfirm()">确认到账</button>
+      </template>
     </BaseModal>
 
     <!-- 退款审批弹窗 -->
@@ -287,11 +288,11 @@ async function doAudit(approved: boolean) {
           <label class="field-label">审批备注</label>
           <textarea v-model="auditNote" class="textarea" placeholder="处理说明（可选）"></textarea>
         </div>
-        <div class="flex gap-6 mt-16">
-          <button class="btn btn-danger-ghost" style="flex: 1" @click="doAudit(false)">驳回</button>
-          <button class="btn btn-primary" style="flex: 2" @click="doAudit(true)">批准</button>
-        </div>
       </div>
+      <template #foot>
+        <button class="btn btn-ghost" @click="auditing = null">取消</button>
+        <button class="btn btn-primary" @click="doAudit(true)">批准</button>
+      </template>
     </BaseModal>
   </div>
 </template>

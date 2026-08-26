@@ -1,10 +1,12 @@
 <script setup lang="ts">
-defineProps<{
+withDefaults(defineProps<{
   open: boolean
   title?: string
   width?: number
   foot?: boolean
-}>()
+}>(), {
+  foot: true
+})
 
 defineEmits<{
   (e: 'close'): void

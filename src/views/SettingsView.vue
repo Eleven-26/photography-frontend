@@ -197,6 +197,10 @@ const statusTone: Record<number, string> = {
           </select>
         </div>
       </form>
+      <template #foot>
+        <button class="btn btn-ghost" @click="inviteOpen = false">取消</button>
+        <button class="btn btn-primary" type="submit" form="modal-form">保存</button>
+      </template>
     </BaseModal>
   </div>
 </template>

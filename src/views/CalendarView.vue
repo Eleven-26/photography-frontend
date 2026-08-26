@@ -158,6 +158,10 @@ async function saveSlot() {
           <input v-model="form.remark" class="input" placeholder="如 午休 / 布景维护" />
         </div>
       </form>
+      <template #foot>
+        <button class="btn btn-ghost" @click="addOpen = false">取消</button>
+        <button class="btn btn-primary" type="submit" form="modal-form">保存</button>
+      </template>
     </BaseModal>
   </div>
 </template>

@@ -6,6 +6,7 @@ import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as orderApi from '@/api/orders'
 import * as demo from '@/api/demo'
+import * as customerApi from '@/api/customers'
 import { useFetch } from '@/composables/useFetch'
 import { money, ORDER_STATUS_LABEL, orderTone, initials, formatDate } from '@/utils/format'
 import type { Order, OrderLog } from '@/types'
@@ -54,6 +55,7 @@ const pillClass = (s: string) => {
   const t = orderTone(s)
   return { orange: 'status-pending', mint: 'status-ok', lav: 'status-info', red: 'status-error', gray: 'status-disabled' }[t]
 }
+
 
 // 订单详情
 const detail = ref<Order | null>(null)
@@ -305,7 +307,7 @@ async function saveOrder() {
         <div class="field">
           <label class="field-label">客户</label>
           <select v-model.number="form.customer_id" class="select">
-            <option v-for="c in demo.demoCustomers" :key="c.id" :value="c.id">{{ c.name }}</option>
+            <option v-for="c in customerApi.listCustomers" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
         </div>
         <div class="field">
@@ -336,6 +338,10 @@ async function saveOrder() {
           <textarea v-model="form.remark" class="input" rows="2" placeholder="可选"></textarea>
         </div>
       </form>
+      <template #foot>
+        <button class="btn btn-ghost" @click="createOpen = false">取消</button>
+        <button class="btn btn-primary" type="submit" form="modal-form">保存</button>
+      </template>
     </BaseModal>
   </div>
 </template>

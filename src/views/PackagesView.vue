@@ -98,6 +98,10 @@ const addOpen = ref(false)
           <input class="input" type="number" min="0" max="100" />
         </div>
       </form>
+      <template #foot>
+        <button class="btn btn-ghost" @click="addOpen = false">取消</button>
+        <button class="btn btn-primary" type="submit" form="modal-form">保存</button>
+      </template>
     </BaseModal>
   </div>
 </template>
