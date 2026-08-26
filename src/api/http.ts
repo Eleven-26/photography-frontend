@@ -83,4 +83,4 @@ export const put = <T>(url: string, data?: unknown) =>
 // ── 后端 RPC 风格：所有业务路由均为 POST ──
 // /api/pc/{module}/{action}[/:id]
 export const rpc = <T>(module: string, action: string, data?: unknown, id?: number | string) =>
-  request<T>({ url: `/api/pc/${module}/${action}${id != null ? `/${id}` : ''}`, method: 'POST', data })
+  request<T>({ url: `/${module}/${action}${id != null ? `/${id}` : ''}`, method: 'POST', data })

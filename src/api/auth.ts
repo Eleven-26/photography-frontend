@@ -3,7 +3,7 @@ import type { AuthUser, LoginParams, LoginResult } from '@/types'
 
 /** 登录 — 公共接口，无 /pc 前缀 */
 export async function login(params: LoginParams) {
-  return await post<LoginResult>('/api/auth/login', params)
+  return await post<LoginResult>('/auth/login', params)
 }
 
 /** 当前用户信息 */
