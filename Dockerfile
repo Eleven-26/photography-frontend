@@ -1,26 +1,13 @@
-# ─────────────────────────────────────────────
-# SLOT 摄影师后台 — 前端生产镜像（多阶段构建）
-# 阶段一：Node 构建静态资源；阶段二：Nginx 托管
-# ─────────────────────────────────────────────
-FROM node:20-alpine AS build
-
+# ---------- 构建阶段 ----------
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-COPY package.json ./
-RUN npm install --no-audit --no-fund
-
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 RUN npm run build
 
-# ── 运行时 ────────────────────────────────────
+# ---------- 运行阶段 ----------
 FROM nginx:1.27-alpine
-
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
-
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -qO- http://127.0.0.1/ > /dev/null 2>&1 || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]
