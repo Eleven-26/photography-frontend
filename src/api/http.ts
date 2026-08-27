@@ -28,7 +28,7 @@ export const tokenStore = {
 }
 
 export const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/',
+  baseURL: '',
   timeout: 15000
 })
 
@@ -81,6 +81,6 @@ export const put = <T>(url: string, data?: unknown) =>
   request<T>({ url, method: 'PUT', data })
 
 // ── 后端 RPC 风格：所有业务路由均为 POST ──
-// /api/pc/{module}/{action}[/:id]
+// /{module}/{action}[/:id]
 export const rpc = <T>(module: string, action: string, data?: unknown, id?: number | string) =>
   request<T>({ url: `/${module}/${action}${id != null ? `/${id}` : ''}`, method: 'POST', data })

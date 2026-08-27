@@ -6,7 +6,6 @@ import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as orderApi from '@/api/orders'
 import * as demo from '@/api/demo'
-import * as customerApi from '@/api/customers'
 import { useFetch } from '@/composables/useFetch'
 import { money, ORDER_STATUS_LABEL, orderTone, initials, formatDate } from '@/utils/format'
 import type { Order, OrderLog } from '@/types'
@@ -307,7 +306,7 @@ async function saveOrder() {
         <div class="field">
           <label class="field-label">客户</label>
           <select v-model.number="form.customer_id" class="select">
-            <option v-for="c in customerApi.listCustomers" :key="c.id" :value="c.id">{{ c.name }}</option>
+            <option v-for="c in demo.demoCustomers" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
         </div>
         <div class="field">

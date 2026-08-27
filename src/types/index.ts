@@ -1,7 +1,7 @@
 // ── 与 photography-server 后端（Go/Gin + GORM）完全对齐的类型 ──
 // 响应体：{ code, msg, data }  分页：{ list, total, page, page_size }
 // 认证：Authorization: Bearer <token>
-// 路由：POST /api/pc/{module}/{action}[/:id]（公共：POST /api/auth/login）
+// 路由：POST /{module}/{action}[/:id]（公共：POST /auth/login）
 
 /** 统一响应体 — 与后端 response.Body 对齐 */
 export interface ApiResponse<T = unknown> {
