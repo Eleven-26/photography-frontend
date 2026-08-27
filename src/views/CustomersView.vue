@@ -24,6 +24,7 @@ const STATUS_CLASS: Record<string, string> = {
 
 const query = reactive({ keyword: '', status: '', page: 1, page_size: 12 })
 
+console.info('[customers] 开始调用列表接口')
 const page = useFetch(
   () => customersApi.listCustomers(query as Record<string, unknown>),
   () => demo.demoCustomersPage(query as Record<string, unknown>)
