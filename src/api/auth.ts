@@ -1,9 +1,10 @@
 import { post, rpc } from './http'
 import type { AuthUser, LoginParams, LoginResult } from '@/types'
+import { API_PATHS } from './common/constants' // ① 导入常量
 
 /** 登录 — 公共接口，无 /pc 前缀 */
 export async function login(params: LoginParams) {
-  return await post<LoginResult>('/auth/login', params)
+  return await post<LoginResult>(API_PATHS.auth.login, params)
 }
 
 /** 当前用户信息 */

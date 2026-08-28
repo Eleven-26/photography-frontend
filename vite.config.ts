@@ -18,9 +18,10 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         // 后端所有业务路由均为 POST（RPC 风格），用正则一次性匹配
-        '^/(order|user|customer|lead|quote|package|payment|refund|delivery|asset|calendar|finance|dashboard|notification|settings|upload|auth)/': {
+        '/api': {
           target: backendUrl,
-          changeOrigin: true
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, '')   // 去掉 /api 前缀
         }
       }
     },

@@ -1,5 +1,6 @@
-import { rpc } from './http'
+import { rpc, rpcv2 } from './http'
 import type { Customer, PageResult } from '@/types'
+import { API_PATHS } from './common/constants' // ① 导入常量
 
 export interface CustomerListParams {
   keyword?: string
@@ -10,7 +11,7 @@ export interface CustomerListParams {
 }
 
 export function listCustomers(params: CustomerListParams = {}) {
-  return rpc<PageResult<Customer>>('customer', 'list', params)
+  return rpcv2<PageResult<Customer>>(API_PATHS.customer.list, params)
 }
 
 export function customerDetail(id: number) {
