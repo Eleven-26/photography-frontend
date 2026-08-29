@@ -1,4 +1,4 @@
-import { rpc } from './http'
+import { rpc } from './common/http'
 import type { Order, OrderLog, PageResult } from '@/types'
 
 export interface OrderListParams {

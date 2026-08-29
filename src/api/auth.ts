@@ -1,4 +1,4 @@
-import { post, rpc } from './http'
+import { post, rpc } from './common/http'
 import type { AuthUser, LoginParams, LoginResult } from '@/types'
 import { API_PATHS } from './common/constants' // ① 导入常量
 

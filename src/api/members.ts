@@ -1,4 +1,4 @@
-import { rpc } from './http'
+import { rpc } from './common/http'
 import type { SysUser, SysRole, PageResult } from '@/types'
 
 export function listUsers(params: Record<string, unknown> = {}) {

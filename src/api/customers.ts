@@ -1,4 +1,4 @@
-import { rpc, rpcv2 } from './http'
+import { rpc, rpcv2 } from './common/http'
 import type { Customer, PageResult } from '@/types'
 import { API_PATHS } from './common/constants' // ① 导入常量
 

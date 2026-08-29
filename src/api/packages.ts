@@ -1,4 +1,4 @@
-import { rpc } from './http'
+import { rpc } from './common/http'
 import type { Package, PageResult } from '@/types'
 
 export function listPackages(params: Record<string, unknown> = {}) {

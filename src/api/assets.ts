@@ -1,4 +1,4 @@
-import { rpc } from './http'
+import { rpc } from './common/http'
 import type { Asset, PageResult } from '@/types'
 
 export function listAssets(params: Record<string, unknown> = {}) {

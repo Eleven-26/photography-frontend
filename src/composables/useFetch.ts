@@ -2,7 +2,7 @@
 // 保证前后端分离环境下前端项目可独立运行与演示（页面顶部有来源提示）。
 
 import { reactive, ref } from 'vue'
-import { ApiError } from '@/api/http'
+import { ApiError } from '@/api/common/http'
 
 export interface FetchResult<T> {
   data: T | null

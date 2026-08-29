@@ -1,4 +1,4 @@
-import { rpc } from './http'
+import { rpc } from './common/http'
 import type { FinanceSummary, Payment, Refund, PageResult } from '@/types'
 
 export function financeSummary() {

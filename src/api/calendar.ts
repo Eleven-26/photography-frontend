@@ -1,4 +1,4 @@
-import { rpc } from './http'
+import { rpc } from './common/http'
 import type { CalendarSlot, PageResult } from '@/types'
 
 export interface CalendarListParams {
