@@ -1,5 +1,6 @@
 import { rpc } from './common/http'
 import type { Order, OrderLog, PageResult } from '@/types'
+import { API_PATHS } from './common/apiPath'
 
 export interface OrderListParams {
   status?: number | '' // 订单状态 int 枚举 1-7，见 ORDER_STATUS；'' 表示全部
@@ -9,15 +10,15 @@ export interface OrderListParams {
 }
 
 export function listOrders(params: OrderListParams = {}) {
-  return rpc<PageResult<Order>>('order', 'list', params)
+  return rpc<PageResult<Order>>(API_PATHS.order.list, params)
 }
 
 export function orderDetail(id: number) {
-  return rpc<Order>('order', 'detail', {}, id)
+  return rpc<Order>(API_PATHS.order.detail, {}, id)
 }
 
 export function orderLogs(id: number) {
-  return rpc<OrderLog[]>('order', 'logs', {}, id)
+  return rpc<OrderLog[]>(API_PATHS.order.logs, {}, id)
 }
 
 export function createOrder(data: {
@@ -30,17 +31,17 @@ export function createOrder(data: {
   addon_amount?: number
   remark?: string
 }) {
-  return rpc<Order>('order', 'create', data)
+  return rpc<Order>(API_PATHS.order.create, data)
 }
 
 export function updateOrder(id: number, data: Partial<Order>) {
-  return rpc<Order>('order', 'update', data, id)
+  return rpc<Order>(API_PATHS.order.update, data, id)
 }
 
 export function updateOrderStatus(id: number, status: number) {
-  return rpc<null>('order', 'status', { status }, id)
+  return rpc<null>(API_PATHS.order.status, { status }, id)
 }
 
 export function cancelOrder(id: number, reason: string) {
-  return rpc<null>('order', 'cancel', { reason }, id)
+  return rpc<null>(API_PATHS.order.cancel, { reason }, id)
 }

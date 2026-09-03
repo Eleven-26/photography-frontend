@@ -1,38 +1,77 @@
+/** API 前缀，rpc 与非 rpc 端点统一从这里取 */
+export const API_PREFIX = '/api'
 
-// 1. 基础 URL（可根据环境自动切换）
-export const BASE_URL = import.meta.env.VITE_APP_API_BASE_URL || '/api'
-
-// 2. 定义所有 API 路径（按模块分组，清晰可维护）
+/**
+ * 所有 API 路径（相对 API_PREFIX）
+ * - auth 为非 RPC 端点，走 post（需自行拼接 API_PREFIX）
+ * - 其余均为 RPC 风格，走 rpc（内部自动拼接 API_PREFIX）
+ */
 export const API_PATHS = {
-  // 认证模块
-  auth: {
-    login: '/api/auth/login',
-    logout: '/auth/logout',
-    refreshToken: '/auth/refresh',
-    getUserInfo: '/auth/me',
-  },
-  // 用户模块
+  // 认证（非 RPC，走 post）
+  auth: { login: '/auth/login' },
+  // 用户
   user: {
-    list: '/users',
-    detail: (id: string | number) => `/users/${id}`,
-    update: (id: string | number) => `/users/${id}`,
-    delete: (id: string | number) => `/users/${id}`,
+    list: 'user/list',
+    create: 'user/create',
+    update: 'user/update',
+    delete: 'user/delete',
+    profile: 'user/profile',
+    changePassword: 'user/change-password',
+    logout: 'user/logout'
   },
-  // 订单模块
-  order: {
-    list: '/orders',
-    create: '/create',
-    detail: (id: string | number) => `/orders/${id}`,
-  },
-
-  // 客户模块
+  // 角色
+  role: { list: 'role/list', create: 'role/create', update: 'role/update' },
+  // 客户
   customer: {
-    list: '/customer/list',
-    detail: (id: string | number) => `/customer/${id}`,
+    list: 'customer/list',
+    detail: 'customer/detail',
+    create: 'customer/create',
+    update: 'customer/update',
+    stats: 'customer/stats'
   },
-  // ... 更多模块
+  // 线索
+  lead: {
+    list: 'lead/list',
+    detail: 'lead/detail',
+    create: 'lead/create',
+    update: 'lead/update',
+    follow: 'lead/follow',
+    convert: 'lead/convert'
+  },
+  // 订单
+  order: {
+    list: 'order/list',
+    detail: 'order/detail',
+    logs: 'order/logs',
+    create: 'order/create',
+    update: 'order/update',
+    status: 'order/status',
+    cancel: 'order/cancel'
+  },
+  // 套餐（package 为保留字，仅作对象 key，属性访问合法）
+  package: {
+    list: 'package/list',
+    detail: 'package/detail',
+    create: 'package/create',
+    update: 'package/update',
+    status: 'package/status'
+  },
+  // 财务
+  finance: { summary: 'finance/summary', payments: 'finance/payments', refunds: 'finance/refunds' },
+  // 收款
+  payment: { confirm: 'payment/confirm' },
+  // 退款
+  refund: { audit: 'refund/audit' },
+  // 档期
+  calendar: { list: 'calendar/list', lock: 'calendar/lock', cancel: 'calendar/cancel' },
+  // 作品
+  asset: {
+    list: 'asset/list',
+    detail: 'asset/detail',
+    create: 'asset/create',
+    update: 'asset/update',
+    delete: 'asset/delete'
+  },
+  // 工作台
+  dashboard: { overview: 'dashboard/overview' }
 } as const
-
-// 3. 如果需要兼容不同版本（v1/v2），可以在这里统一控制
-export const API_VERSION = '/v1'
-export const BASE_URL_WITH_VERSION = BASE_URL + API_VERSION

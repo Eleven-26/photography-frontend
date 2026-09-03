@@ -1,6 +1,6 @@
-import { rpc, rpcv2 } from './common/http'
+import { rpc } from './common/http'
 import type { Customer, PageResult } from '@/types'
-import { API_PATHS } from './common/apiPath' // ① 导入常量
+import { API_PATHS } from './common/apiPath'
 
 export interface CustomerListParams {
   keyword?: string
@@ -11,21 +11,21 @@ export interface CustomerListParams {
 }
 
 export function listCustomers(params: CustomerListParams = {}) {
-  return rpcv2<PageResult<Customer>>(API_PATHS.customer.list, params)
+  return rpc<PageResult<Customer>>(API_PATHS.customer.list, params)
 }
 
 export function customerDetail(id: number) {
-  return rpc<Customer>('customer', 'detail', {}, id)
+  return rpc<Customer>(API_PATHS.customer.detail, {}, id)
 }
 
 export function createCustomer(data: Partial<Customer>) {
-  return rpc<Customer>('customer', 'create', data)
+  return rpc<Customer>(API_PATHS.customer.create, data)
 }
 
 export function updateCustomer(id: number, data: Partial<Customer>) {
-  return rpc<Customer>('customer', 'update', data, id)
+  return rpc<Customer>(API_PATHS.customer.update, data, id)
 }
 
 export function customerStats() {
-  return rpc<{ total: number; potential: number; active: number; inactive: number }>('customer', 'stats')
+  return rpc<{ total: number; potential: number; active: number; inactive: number }>(API_PATHS.customer.stats)
 }

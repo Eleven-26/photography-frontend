@@ -1,5 +1,6 @@
 import axios, { type AxiosRequestConfig, AxiosError } from 'axios'
 import type { ApiResponse } from '@/types'
+import { API_PREFIX } from './apiPath'
 
 /** 业务错误（后端 code != 0） */
 export class ApiError extends Error {
@@ -71,19 +72,9 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
   return (res.data as ApiResponse<T>).data as T
 }
 
-export const get = <T>(url: string, params?: Record<string, unknown>) =>
-  request<T>({ url, method: 'GET', params })
-
 export const post = <T>(url: string, data?: unknown) =>
   request<T>({ url, method: 'POST', data })
 
-export const put = <T>(url: string, data?: unknown) =>
-  request<T>({ url, method: 'PUT', data })
-
-// ── 后端 RPC 风格：所有业务路由均为 POST ──
-// /{module}/{action}[/:id]
-export const rpc = <T>(module: string, action: string, data?: unknown, id?: number | string) =>
-  request<T>({ url: `/api/${module}/${action}${id != null ? `/${id}` : ''}`, method: 'POST', data })
-
-export const rpcv2 = <T>(apiPath: string, data?: unknown, id?: number | string) =>
-  request<T>({ url: `/api/${apiPath}${id != null ? `/${id}` : ''}`, method: 'POST', data })
+// ── 后端 RPC 风格：所有业务路由均为 POST /{apiPath}[/:id] ──
+export const rpc = <T>(apiPath: string, data?: unknown, id?: number | string) =>
+  request<T>({ url: `${API_PREFIX}/${apiPath}${id != null ? `/${id}` : ''}`, method: 'POST', data })

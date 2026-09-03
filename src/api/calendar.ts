@@ -1,5 +1,6 @@
 import { rpc } from './common/http'
 import type { CalendarSlot, PageResult } from '@/types'
+import { API_PATHS } from './common/apiPath'
 
 export interface CalendarListParams {
   date?: string
@@ -8,7 +9,7 @@ export interface CalendarListParams {
 }
 
 export function listCalendar(params: CalendarListParams = {}) {
-  return rpc<PageResult<CalendarSlot>>('calendar', 'list', params)
+  return rpc<PageResult<CalendarSlot>>(API_PATHS.calendar.list, params)
 }
 
 export function lockCalendar(data: {
@@ -17,9 +18,9 @@ export function lockCalendar(data: {
   order_id?: number
   remark?: string
 }) {
-  return rpc<CalendarSlot>('calendar', 'lock', data)
+  return rpc<CalendarSlot>(API_PATHS.calendar.lock, data)
 }
 
 export function cancelCalendar(id: number) {
-  return rpc<null>('calendar', 'cancel', {}, id)
+  return rpc<null>(API_PATHS.calendar.cancel, {}, id)
 }
