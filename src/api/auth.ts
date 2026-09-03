@@ -1,6 +1,6 @@
 import { post, rpc } from './common/http'
 import type { AuthUser, LoginParams, LoginResult } from '@/types'
-import { API_PATHS } from './common/constants' // ① 导入常量
+import { API_PATHS } from './common/apiPath' // ① 导入常量
 
 /** 登录 — 公共接口，无 /pc 前缀 */
 export async function login(params: LoginParams) {

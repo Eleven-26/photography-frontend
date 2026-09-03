@@ -1,11 +1,11 @@
 import { rpc, rpcv2 } from './common/http'
 import type { Customer, PageResult } from '@/types'
-import { API_PATHS } from './common/constants' // ① 导入常量
+import { API_PATHS } from './common/apiPath' // ① 导入常量
 
 export interface CustomerListParams {
   keyword?: string
-  status?: string
-  level?: string
+  status?: number | '' // 客户状态 int 枚举 1-3，见 CUSTOMER_STATUS；'' 表示全部
+  level?: number | '' // 客户等级 int 枚举 1-4，见 CUSTOMER_LEVEL；'' 表示全部
   page?: number
   page_size?: number
 }

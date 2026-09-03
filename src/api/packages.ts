@@ -17,6 +17,6 @@ export function updatePackage(id: number, data: Partial<Package>) {
   return rpc<Package>('package', 'update', data, id)
 }
 
-export function setPackageStatus(id: number, status: string) {
+export function setPackageStatus(id: number, status: number) {
   return rpc<null>('package', 'status', { status }, id)
 }

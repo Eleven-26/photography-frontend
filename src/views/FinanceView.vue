@@ -8,17 +8,17 @@ import * as demo from '@/api/demo'
 import { useFetch } from '@/composables/useFetch'
 import { money, formatDateTime } from '@/utils/format'
 import type { Payment, Refund } from '@/types'
-import { PAYMENT_STATUS_LABEL, REFUND_STATUS_LABEL } from '@/types'
+import { PAYMENT_STATUS, PAYMENT_STATUS_LABEL, REFUND_STATUS, REFUND_STATUS_LABEL } from '@/types'
 
 const overview = useFetch(() => financeApi.financeSummary(), () => demo.demoFinanceSummary())
 
-const payFilter = reactive({ status: '' })
+const payFilter = reactive({ status: '' as number | '' })
 const payments = useFetch(
   () => financeApi.listPayments(payFilter),
   () => demo.demoPaymentsPage()
 )
 
-const refundFilter = reactive({ status: '' })
+const refundFilter = reactive({ status: '' as number | '' })
 const refunds = useFetch(
   () => financeApi.listRefunds(refundFilter),
   () => demo.demoRefundsPage()
@@ -26,17 +26,17 @@ const refunds = useFetch(
 
 const tab = ref<'payments' | 'refunds'>('payments')
 
-const payTone: Record<string, string> = {
-  pending: 'status-pending',
-  confirmed: 'status-ok',
-  refunded: 'status-error'
+const payTone: Record<number, string> = {
+  [PAYMENT_STATUS.PENDING]: 'status-pending',
+  [PAYMENT_STATUS.CONFIRMED]: 'status-ok',
+  [PAYMENT_STATUS.REFUNDED]: 'status-error'
 }
 
-const refundTone: Record<string, string> = {
-  applying: 'status-pending',
-  approved: 'status-ok',
-  done: 'status-ok',
-  rejected: 'status-error'
+const refundTone: Record<number, string> = {
+  [REFUND_STATUS.APPLYING]: 'status-pending',
+  [REFUND_STATUS.APPROVED]: 'status-ok',
+  [REFUND_STATUS.DONE]: 'status-ok',
+  [REFUND_STATUS.REJECTED]: 'status-error'
 }
 
 const typeLabel: Record<string, string> = {
@@ -148,9 +148,9 @@ async function doAudit(approved: boolean) {
       <div class="filter-bar">
         <select v-model="payFilter.status" class="select" @change="payments.load()">
           <option value="">全部状态</option>
-          <option value="pending">待核验</option>
-          <option value="confirmed">已确认</option>
-          <option value="refunded">已退款</option>
+          <option :value="PAYMENT_STATUS.PENDING">待核验</option>
+          <option :value="PAYMENT_STATUS.CONFIRMED">已确认</option>
+          <option :value="PAYMENT_STATUS.REFUNDED">已退款</option>
         </select>
       </div>
 
@@ -184,7 +184,7 @@ async function doAudit(approved: boolean) {
                 </td>
                 <td>
                   <button
-                    v-if="p.status === 'pending'"
+                    v-if="p.status === PAYMENT_STATUS.PENDING"
                     class="btn btn-sm btn-primary"
                     @click="openConfirm(p)"
                   >
@@ -204,10 +204,10 @@ async function doAudit(approved: boolean) {
       <div class="filter-bar">
         <select v-model="refundFilter.status" class="select" @change="refunds.load()">
           <option value="">全部状态</option>
-          <option value="applying">申请中</option>
-          <option value="approved">已通过</option>
-          <option value="done">已退款</option>
-          <option value="rejected">已驳回</option>
+          <option :value="REFUND_STATUS.APPLYING">申请中</option>
+          <option :value="REFUND_STATUS.APPROVED">已通过</option>
+          <option :value="REFUND_STATUS.DONE">已退款</option>
+          <option :value="REFUND_STATUS.REJECTED">已驳回</option>
         </select>
       </div>
 
@@ -241,7 +241,7 @@ async function doAudit(approved: boolean) {
                 </td>
                 <td>
                   <button
-                    v-if="r.status === 'applying'"
+                    v-if="r.status === REFUND_STATUS.APPLYING"
                     class="btn btn-sm btn-primary"
                     @click="openAudit(r)"
                   >

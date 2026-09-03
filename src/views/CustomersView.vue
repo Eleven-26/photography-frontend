@@ -8,21 +8,18 @@ import * as demo from '@/api/demo'
 import { useFetch } from '@/composables/useFetch'
 import { money, initials } from '@/utils/format'
 import type { Customer } from '@/types'
-import { CUSTOMER_LEVEL_LABEL } from '@/types'
+import { CUSTOMER_LEVEL_LABEL, CUSTOMER_STATUS_LABEL } from '@/types'
+import { CUSTOMER_LEVEL, CUSTOMER_STATUS } from '@/types'
 
-const STATUS_LABEL: Record<string, string> = {
-  potential: '潜在客户',
-  active: '活跃',
-  inactive: '非活跃'
+const STATUS_LABEL = CUSTOMER_STATUS_LABEL
+
+const STATUS_CLASS: Record<number, string> = {
+  [CUSTOMER_STATUS.POTENTIAL]: 'status-pending',
+  [CUSTOMER_STATUS.ACTIVE]: 'status-ok',
+  [CUSTOMER_STATUS.INACTIVE]: 'status-muted'
 }
 
-const STATUS_CLASS: Record<string, string> = {
-  potential: 'status-pending',
-  active: 'status-ok',
-  inactive: 'status-muted'
-}
-
-const query = reactive({ keyword: '', status: '', page: 1, page_size: 12 })
+const query = reactive({ keyword: '', status: '' as number | '', page: 1, page_size: 12 })
 
 console.info('[customers] 开始调用列表接口')
 const page = useFetch(
@@ -49,10 +46,10 @@ const editForm = reactive({
   mobile: '',
   wechat: '',
   gender: 'unknown' as Customer['gender'],
-  level: 'normal' as Customer['level'],
+  level: CUSTOMER_LEVEL.NORMAL as Customer['level'],
   source: '',
   tags: '',
-  status: 'active' as Customer['status'],
+  status: CUSTOMER_STATUS.ACTIVE as Customer['status'],
   remark: ''
 })
 
@@ -110,7 +107,7 @@ const form = reactive({
   name: '',
   mobile: '',
   source: '',
-  level: 'normal' as Customer['level'],
+  level: CUSTOMER_LEVEL.NORMAL as Customer['level'],
   remark: ''
 })
 
@@ -183,9 +180,9 @@ async function saveCustomer() {
       </div>
       <select v-model="query.status" class="select">
         <option value="">全部状态</option>
-        <option value="potential">潜在客户</option>
-        <option value="active">活跃</option>
-        <option value="inactive">非活跃</option>
+        <option :value="CUSTOMER_STATUS.POTENTIAL">潜在客户</option>
+        <option :value="CUSTOMER_STATUS.ACTIVE">活跃</option>
+        <option :value="CUSTOMER_STATUS.INACTIVE">非活跃</option>
       </select>
     </div>
 
@@ -346,10 +343,10 @@ async function saveCustomer() {
         <div class="field">
           <label class="field-label">等级</label>
           <select v-model="form.level" class="select">
-            <option value="normal">普通</option>
-            <option value="gold">黄金</option>
-            <option value="platinum">铂金</option>
-            <option value="diamond">钻石</option>
+            <option :value="CUSTOMER_LEVEL.NORMAL">普通</option>
+            <option :value="CUSTOMER_LEVEL.GOLD">黄金</option>
+            <option :value="CUSTOMER_LEVEL.PLATINUM">铂金</option>
+            <option :value="CUSTOMER_LEVEL.DIAMOND">钻石</option>
           </select>
         </div>
         <div class="field">

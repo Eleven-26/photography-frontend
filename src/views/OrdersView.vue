@@ -13,15 +13,15 @@ import type { Order, OrderLog } from '@/types'
 const route = useRoute()
 
 const query = reactive({
-  status: '',
+  status: '' as number | '', // 订单状态 int 枚举，'' 为全部
   keyword: String(route.query.keyword || ''),
   page: 1,
   page_size: 10
 })
 
-const statusTabs = [
+const statusTabs: { key: number | ''; label: string }[] = [
   { key: '', label: '全部订单' },
-  ...Object.entries(ORDER_STATUS_LABEL).map(([key, label]) => ({ key, label }))
+  ...Object.entries(ORDER_STATUS_LABEL).map(([key, label]) => ({ key: Number(key), label }))
 ]
 
 const pageRes = useFetch(
@@ -41,7 +41,7 @@ function search() {
   pageRes.load()
 }
 
-function setStatus(key: string) {
+function setStatus(key: number | '') {
   query.status = key
   query.page = 1
 }
@@ -50,7 +50,7 @@ function goPage(p: number) {
   query.page = p
 }
 
-const pillClass = (s: string) => {
+const pillClass = (s: number) => {
   const t = orderTone(s)
   return { orange: 'status-pending', mint: 'status-ok', lav: 'status-info', red: 'status-error', gray: 'status-disabled' }[t]
 }
@@ -78,8 +78,8 @@ async function openDetail(o: Order) {
     } catch {
       detail.value = o
       detailLogs.value = [
-        { id: 1, company_id: 1, order_id: o.id, action: 'create', from_status: '', to_status: 'pending_deposit', content: '创建订单', operator_id: 1, operator_name: '路鸿楼' },
-        { id: 2, company_id: 1, order_id: o.id, action: 'status', from_status: 'pending_deposit', to_status: o.status, content: `状态变更为 ${ORDER_STATUS_LABEL[o.status] || o.status}`, operator_id: 1, operator_name: '路鸿楼' }
+        { id: 1, company_id: 1, order_id: o.id, action: 'create', from_status: '', to_status: '1', content: '创建订单', operator_id: 1, operator_name: '路鸿楼' },
+        { id: 2, company_id: 1, order_id: o.id, action: 'status', from_status: '1', to_status: String(o.status), content: `状态变更为 ${ORDER_STATUS_LABEL[o.status] || o.status}`, operator_id: 1, operator_name: '路鸿楼' }
       ]
     }
   } finally {

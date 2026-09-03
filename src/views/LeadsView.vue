@@ -15,14 +15,14 @@ const page = useFetch(
 
 const leads = computed(() => page.data?.list || [])
 
-const filter = reactive({ status: '', keyword: '' })
+const filter = reactive({ status: '' as number | '', keyword: '' })
 
-const statusTone: Record<string, string> = {
-  pending: 'status-pending',
-  quoting: 'status-info',
-  quoted: 'status-ok',
-  confirmed: 'status-ok',
-  lose: 'status-lose'
+const statusTone: Record<number, string> = {
+  1: 'status-pending', // 待回复
+  2: 'status-info', // 待报价
+  3: 'status-ok', // 已报价
+  4: 'status-ok', // 已成交
+  5: 'status-lose' // 已流失
 }
 
 const filtered = computed(() =>

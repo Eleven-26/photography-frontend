@@ -62,8 +62,7 @@ async function saveSlot() {
     try {
       await calendarApi.lockCalendar({
         date: form.value.date,
-        start_time: form.value.start_time,
-        end_time: form.value.end_time,
+        time_range: `${form.value.start_time}-${form.value.end_time}`,
         remark: form.value.remark
       })
       toastOk('档期已锁定')
@@ -126,12 +125,12 @@ async function saveSlot() {
             v-for="s in slotsFor(date)"
             :key="s.id"
             class="slot"
-            :class="s.block_type"
+            :class="s.status === 1 ? 'locked' : 'cancelled'"
           >
-            <div class="slot-time">{{ s.start_time }}-{{ s.end_time }}</div>
-            <div class="slot-title">{{ s.remark || s.block_type }}</div>
-            <span class="pill" :class="s.block_type === 'locked' ? 'status-pending' : 'status-disabled'">
-              {{ s.block_type === 'locked' ? '已锁定' : '已取消' }}
+            <div class="slot-time">{{ s.time_range }}</div>
+            <div class="slot-title">{{ s.remark || (s.status === 1 ? '已锁定' : '已取消') }}</div>
+            <span class="pill" :class="s.status === 1 ? 'status-pending' : 'status-disabled'">
+              {{ s.status === 1 ? '已锁定' : '已取消' }}
             </span>
           </div>
           <div v-if="!slotsFor(date).length" class="slot slot-empty">空闲</div>

@@ -60,29 +60,18 @@ import {
   CUSTOMER_LEVEL_LABEL
 } from '@/types'
 
-/** 订单状态 -> 状态色 */
-export function orderTone(status?: string): string {
+/** 订单状态 -> 状态色（int 枚举，见 ORDER_STATUS） */
+export function orderTone(status?: number | null): string {
   switch (status) {
-    case 'pending_deposit': return 'orange'
-    case 'scheduled': return 'lav'
-    case 'shooting': return 'orange'
-    case 'retouching': return 'lav'
-    case 'awaiting_delivery': return 'orange'
-    case 'completed': return 'mint'
-    case 'cancelled': return 'red'
+    case 1: return 'orange' // 待定金
+    case 2: return 'lav' // 待拍摄
+    case 3: return 'orange' // 拍摄中
+    case 4: return 'lav' // 精修中
+    case 5: return 'orange' // 待交付
+    case 6: return 'mint' // 已完成
+    case 7: return 'red' // 已取消
     default: return 'gray'
   }
-}
-
-/** 通用状态色（兼容旧调用） */
-export function toneOf(key?: string): string {
-  const k = String(key || '')
-  if (['scheduled', 'awaiting_delivery', 'attention', 'pending'].includes(k)) return 'orange'
-  if (['completed', 'confirmed'].includes(k)) return 'mint'
-  if (['retouching', 'shooting', 'approved', 'pending_verify'].includes(k)) return 'lav'
-  if (['cancelled', 'rejected', 'urgent', 'lose'].includes(k)) return 'red'
-  if (['pending_deposit', 'normal', 'active'].includes(k)) return 'gray'
-  return 'gray'
 }
 
 export { ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL, LEAD_STATUS_LABEL, REFUND_STATUS_LABEL, DELIVERY_STAGE_LABEL, CUSTOMER_LEVEL_LABEL }

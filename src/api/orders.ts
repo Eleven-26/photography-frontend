@@ -2,7 +2,7 @@ import { rpc } from './common/http'
 import type { Order, OrderLog, PageResult } from '@/types'
 
 export interface OrderListParams {
-  status?: string
+  status?: number | '' // 订单状态 int 枚举 1-7，见 ORDER_STATUS；'' 表示全部
   keyword?: string
   page?: number
   page_size?: number
@@ -37,7 +37,7 @@ export function updateOrder(id: number, data: Partial<Order>) {
   return rpc<Order>('order', 'update', data, id)
 }
 
-export function updateOrderStatus(id: number, status: string) {
+export function updateOrderStatus(id: number, status: number) {
   return rpc<null>('order', 'status', { status }, id)
 }
 

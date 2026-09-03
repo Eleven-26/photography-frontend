@@ -13,8 +13,7 @@ export function listCalendar(params: CalendarListParams = {}) {
 
 export function lockCalendar(data: {
   date: string
-  start_time: string
-  end_time: string
+  time_range: string // 时段，如 09:00-12:00（对齐后端 CalendarBlockReq）
   order_id?: number
   remark?: string
 }) {

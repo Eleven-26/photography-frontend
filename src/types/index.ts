@@ -2,6 +2,34 @@
 // 响应体：{ code, msg, data }  分页：{ list, total, page, page_size }
 // 认证：Authorization: Bearer <token>
 // 路由：POST /{module}/{action}[/:id]（公共：POST /auth/login）
+// 状态位：后端已全部改为 tinyint int 枚举（见 @/constants/enums），
+// 请求参数与响应中的 status/level/stage 等字段统一为 number。
+
+export {
+  ORDER_STATUS,
+  ORDER_STATUS_LABEL,
+  PAYMENT_STATUS,
+  PAYMENT_STATUS_LABEL,
+  REFUND_STATUS,
+  REFUND_STATUS_LABEL,
+  LEAD_STATUS,
+  LEAD_STATUS_LABEL,
+  QUOTE_STATUS,
+  QUOTE_STATUS_LABEL,
+  CUSTOMER_STATUS,
+  CUSTOMER_STATUS_LABEL,
+  CUSTOMER_LEVEL,
+  CUSTOMER_LEVEL_LABEL,
+  PACKAGE_STATUS,
+  PACKAGE_STATUS_LABEL,
+  DELIVERY_STAGE,
+  DELIVERY_STAGE_LABEL,
+  ASSET_STATUS,
+  ASSET_STATUS_LABEL,
+  BLOCK_STATUS,
+  BLOCK_STATUS_LABEL,
+  NOTIFICATION_READ
+} from '@/constants/enums'
 
 /** 统一响应体 — 与后端 response.Body 对齐 */
 export interface ApiResponse<T = unknown> {
@@ -98,10 +126,10 @@ export interface Customer {
   wechat: string
   gender: 'male' | 'female' | 'unknown'
   birthday?: string | null
-  level: 'normal' | 'gold' | 'platinum' | 'diamond'
+  level: number // 客户等级 1-普通 2-黄金 3-铂金 4-钻石
   source: string
   tags: string
-  status: 'potential' | 'active' | 'inactive'
+  status: number // 客户状态 1-潜在 2-活跃 3-流失
   remark: string
   avatar: string
   order_count: number
@@ -121,7 +149,7 @@ export interface Lead {
   project_type: string
   budget_min: number
   budget_max: number
-  status: 'pending' | 'quoting' | 'quoted' | 'confirmed' | 'lose'
+  status: number // 线索状态 1-待回复 2-待报价 3-已报价 4-已成交 5-已流失
   shoot_date?: string | null
   remark: string
   owner_id: number
@@ -144,7 +172,7 @@ export interface Quote {
   base_price: number
   addon_price: number
   total_price: number
-  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'converted'
+  status: number // 报价单状态 1-草稿 2-已发送 3-已接受 4-已拒绝 5-已成交
   remark: string
   owner_id: number
   shoot_date?: string | null
@@ -166,21 +194,15 @@ export interface Package {
   shoot_hours: number
   content_desc: string
   addon_unit_price: number
-  status: 'active' | 'draft' | 'offline'
+  status: number // 套餐状态 1-草稿 2-已上架 3-已下线
   version: number
   base_version: number
   published_at?: string | null
 }
 
 // ──── 订单（biz_order）────────────────────────────
-export type OrderStatus =
-  | 'pending_deposit'
-  | 'scheduled'
-  | 'shooting'
-  | 'retouching'
-  | 'awaiting_delivery'
-  | 'completed'
-  | 'cancelled'
+/** 订单状态为后端 int 枚举，取值见 ORDER_STATUS（@/constants/enums） */
+export type OrderStatus = number
 
 export interface Order {
   id: number
@@ -202,8 +224,8 @@ export interface Order {
   total_amt: number
   paid_amt: number
   refund_amt: number
-  status: OrderStatus
-  payment_status: 'pending' | 'confirmed' | 'unpaid' | 'refunded'
+  status: OrderStatus // 1-待定金 2-待拍摄 3-拍摄中 4-精修中 5-待交付 6-已完成 7-已取消
+  payment_status: number // 1-待核验 2-已确认 3-待支付 4-已退款
   shoot_date?: string | null
   shoot_time: string
   shoot_address: string
@@ -216,7 +238,8 @@ export interface Order {
 }
 
 // ──── 收款（biz_order_payment）────────────────────
-export type PaymentStatus = 'pending' | 'confirmed' | 'refunded'
+/** 支付状态为后端 int 枚举，取值见 PAYMENT_STATUS（@/constants/enums） */
+export type PaymentStatus = number
 
 export interface Payment {
   id: number
@@ -228,7 +251,7 @@ export interface Payment {
   amount: number
   method_id: number
   method_name: string
-  status: PaymentStatus
+  status: PaymentStatus // 1-待核验 2-已确认 3-待支付 4-已退款
   paid_at?: string | null
   voucher: string
   operator_id: number
@@ -237,7 +260,8 @@ export interface Payment {
 }
 
 // ──── 退款（biz_order_refund）────────────────────
-export type RefundStatus = 'applying' | 'approved' | 'done' | 'rejected'
+/** 退款状态为后端 int 枚举，取值见 REFUND_STATUS（@/constants/enums） */
+export type RefundStatus = number
 
 export interface Refund {
   id: number
@@ -248,7 +272,7 @@ export interface Refund {
   amount: number
   reason: string
   refund_rule: string
-  status: RefundStatus
+  status: RefundStatus // 1-申请中 2-已通过 3-已退款 4-已驳回
   apply_by: number
   apply_name: string
   audit_by: number
@@ -271,12 +295,8 @@ export interface OrderLog {
 }
 
 // ──── 交付（biz_delivery）────────────────────────
-export type DeliveryStage =
-  | 'upload_pending'
-  | 'selecting'
-  | 'retouching'
-  | 'deliver_ready'
-  | 'completed'
+/** 交付阶段为后端 int 枚举，取值见 DELIVERY_STAGE（@/constants/enums） */
+export type DeliveryStage = number
 
 export interface Delivery {
   id: number
@@ -285,7 +305,7 @@ export interface Delivery {
   order_id: number
   customer_id: number
   customer_name: string
-  stage: DeliveryStage
+  stage: DeliveryStage // 1-待上传样片 2-客户选片中 3-精修进行中 4-待确认交付 5-已交付
   sample_count: number
   selected_count: number
   retouched_count: number
@@ -304,7 +324,7 @@ export interface Asset {
   cover: string
   category: string
   content: string
-  status: 'draft' | 'published'
+  status: number // 作品状态 1-草稿 2-已发布
   published_at?: string | null
 }
 
@@ -344,63 +364,25 @@ export interface FinanceSummary {
   refunding_amount: number
 }
 
-// ──── 档期 ────────────────────────────────────────
+// ──── 档期（biz_calendar_block，字段与后端 CalendarBlock 对齐）───
 export interface CalendarSlot {
   id: number
   company_id: number
-  date: string
-  start_time: string
-  end_time: string
-  block_type: 'locked' | 'cancelled'
+  store_id: number
   order_id: number
+  customer_id: number
+  customer_name: string
+  date: string
+  time_range: string
+  project_type: string
+  photographer_id: number
+  photographer: string
+  status: number // 档期状态 1-已锁定 2-已取消
   remark: string
   operator_id: number
 }
 
-// ──── 前端路由用的状态标签映射 ─────────────────────
-export const ORDER_STATUS_LABEL: Record<string, string> = {
-  pending_deposit: '待定金',
-  scheduled: '待拍摄',
-  shooting: '拍摄中',
-  retouching: '精修中',
-  awaiting_delivery: '待交付',
-  completed: '已完成',
-  cancelled: '已取消'
-}
-
-export const LEAD_STATUS_LABEL: Record<string, string> = {
-  pending: '待回复',
-  quoting: '待报价',
-  quoted: '已报价',
-  confirmed: '已成交',
-  lose: '已流失'
-}
-
-export const PAYMENT_STATUS_LABEL: Record<string, string> = {
-  pending: '待核验',
-  confirmed: '已确认',
-  unpaid: '待支付',
-  refunded: '已退款'
-}
-
-export const REFUND_STATUS_LABEL: Record<string, string> = {
-  applying: '申请中',
-  approved: '已通过',
-  done: '已退款',
-  rejected: '已驳回'
-}
-
-export const DELIVERY_STAGE_LABEL: Record<string, string> = {
-  upload_pending: '待上传样片',
-  selecting: '客户选片中',
-  retouching: '精修进行中',
-  deliver_ready: '待确认交付',
-  completed: '已交付'
-}
-
-export const CUSTOMER_LEVEL_LABEL: Record<string, string> = {
-  normal: '普通',
-  gold: '黄金',
-  platinum: '铂金',
-  diamond: '钻石'
-}
+// ──── 前端路由用的状态标签映射（数字 key，见 @/constants/enums）──
+// ORDER_STATUS_LABEL / LEAD_STATUS_LABEL / PAYMENT_STATUS_LABEL /
+// REFUND_STATUS_LABEL / DELIVERY_STAGE_LABEL / CUSTOMER_LEVEL_LABEL 等
+// 已迁移至 @/constants/enums 并在此文件 re-export，请从 '@/types' 导入。

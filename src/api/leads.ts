@@ -2,7 +2,7 @@ import { rpc } from './common/http'
 import type { Lead, PageResult } from '@/types'
 
 export interface LeadListParams {
-  status?: string
+  status?: number | '' // 线索状态 int 枚举 1-5，见 LEAD_STATUS；'' 表示全部
   keyword?: string
   page?: number
   page_size?: number

@@ -5,11 +5,13 @@ export function financeSummary() {
   return rpc<FinanceSummary>('finance', 'summary')
 }
 
-export function listPayments(params: Record<string, unknown> = {}) {
+export function listPayments(params: { status?: number | '' } = {}) {
+  // status 为支付状态 int 枚举 1-4（见 PAYMENT_STATUS），'' 表示全部
   return rpc<PageResult<Payment>>('finance', 'payments', params)
 }
 
-export function listRefunds(params: Record<string, unknown> = {}) {
+export function listRefunds(params: { status?: number | '' } = {}) {
+  // status 为退款状态 int 枚举 1-4（见 REFUND_STATUS），'' 表示全部
   return rpc<PageResult<Refund>>('finance', 'refunds', params)
 }
 
