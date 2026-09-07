@@ -92,7 +92,7 @@ src/
 ## 构建与部署（Docker）
 
 - `Dockerfile`：多阶段构建 —— `node:20-alpine` 执行 `npm ci && npm run build` → `nginx:1.27-alpine` 托管 `dist/`。
-- `deploy/nginx.conf`：gzip 压缩、`/assets/` 静态资源缓存 30 天、`/api/` 反向代理（重写去前缀后转发到 `backend:8080`）、SPA 路由回退到 `index.html`。容器监听 80 端口。
+- `build/nginx.conf`：gzip 压缩、`/assets/` 静态资源缓存 30 天、`/api/` 反向代理（重写去前缀后转发到 `backend:8080`）、SPA 路由回退到 `index.html`。容器监听 80 端口。
 
 ```bash
 npm run docker:build   # 构建前端镜像 slot-admin-frontend:latest
