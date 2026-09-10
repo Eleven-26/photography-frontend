@@ -28,7 +28,11 @@ export {
   ASSET_STATUS_LABEL,
   BLOCK_STATUS,
   BLOCK_STATUS_LABEL,
-  NOTIFICATION_READ
+  NOTIFICATION_READ,
+  RESCHEDULE_STATUS,
+  RESCHEDULE_STATUS_LABEL,
+  RESCHEDULE_FEE_TYPE,
+  RESCHEDULE_FEE_TYPE_LABEL
 } from '@/constants/enums'
 
 /** 统一响应体 — 与后端 response.Body 对齐 */
@@ -292,6 +296,7 @@ export interface OrderLog {
   content: string
   operator_id: number
   operator_name: string
+  created_at?: string
 }
 
 // ──── 交付（biz_delivery）────────────────────────
@@ -327,6 +332,77 @@ export interface OrderDetail {
   refunds: Refund[] | null
   logs: OrderLog[] | null
   delivery: Delivery | null
+  /**
+   * 当前状态允许流转到的目标状态（后端领域状态机输出）。
+   * 前端据此渲染「阶段推进」按钮，不在客户端重复实现状态机规则。
+   * 旧版本后端可能不返回此字段，消费时需 `|| []` 兜底。
+   */
+  allowed_transitions: number[] | null
+}
+
+// ──── 订单加项（biz_order_addon）──────────────────
+/** 加项分类（后端存字符串，见 model.OrderAddon.Category） */
+export type AddonCategory = 'makeup' | 'urgency' | 'service' | 'retouch'
+
+export interface OrderAddon {
+  id: number
+  company_id: number
+  order_id: number
+  name: string
+  category: string // makeup-妆造 urgency-时效 service-服务 retouch-精修
+  price: number
+  qty: number
+  amount: number // 小计 = price × qty
+  confirmed: number // 0-待确认 1-已确认
+  remark: string
+}
+
+// ──── 改期单（biz_order_reschedule）──────────────
+/** 改期状态为后端 int 枚举，取值见 RESCHEDULE_STATUS（@/constants/enums） */
+export type RescheduleStatus = number
+/** 改期费用类型为后端 int 枚举，取值见 RESCHEDULE_FEE_TYPE（@/constants/enums） */
+export type RescheduleFeeType = number
+
+export interface OrderReschedule {
+  id: number
+  company_id: number
+  code: string
+  order_id: number
+  customer_id: number
+  original_date: string
+  original_time: string
+  new_date: string
+  new_time: string
+  fee_type: RescheduleFeeType // 1-免费 2-收调度费 3-不可改期
+  fee_amount: number
+  reason_label: string
+  reason: string
+  status: RescheduleStatus // 1-待确认 2-已同意 3-已拒绝 4-已取消
+  apply_source: number // 1-管理端/摄影师发起 2-客户申请
+  audit_by: number
+  audit_name: string
+  audit_at?: string | null
+  audit_remark: string
+}
+
+// ──── 交付文件（biz_delivery_item）────────────────
+export interface DeliveryItem {
+  id: number
+  company_id: number
+  delivery_id: number
+  order_id: number
+  url: string
+  file_type: string // image-图片 video-视频
+  kind: string // sample-样片 selected-已选 retouched-精修成品
+  filename: string
+  size: number // 字节
+  is_selected: number // 0-否 1-是
+  feedback_content: string
+  feedback_types: string
+  feedback_priority: string
+  feedback_status: number // 0-无 1-待处理 2-已处理
+  handled_at?: string | null
+  handle_remark: string
 }
 
 // ──── 作品集（biz_asset）────────────────────────

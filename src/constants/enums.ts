@@ -174,3 +174,31 @@ export const NOTIFICATION_READ = {
   UNREAD: 0, // 未读
   READ: 1 // 已读
 } as const
+
+/** 改期单状态（enum.RescheduleStatus） */
+export const RESCHEDULE_STATUS = {
+  PENDING: 1, // 待确认
+  APPROVED: 2, // 已同意
+  REJECTED: 3, // 已拒绝
+  CANCELLED: 4 // 已取消
+} as const
+
+export const RESCHEDULE_STATUS_LABEL: Record<number, string> = {
+  [RESCHEDULE_STATUS.PENDING]: '待确认',
+  [RESCHEDULE_STATUS.APPROVED]: '已同意',
+  [RESCHEDULE_STATUS.REJECTED]: '已拒绝',
+  [RESCHEDULE_STATUS.CANCELLED]: '已取消'
+}
+
+/** 改期费用类型（enum.RescheduleFeeType） */
+export const RESCHEDULE_FEE_TYPE = {
+  FREE: 1, // 免费
+  CHARGED: 2, // 收调度费
+  FORBIDDEN: 3 // 不可改期
+} as const
+
+export const RESCHEDULE_FEE_TYPE_LABEL: Record<number, string> = {
+  [RESCHEDULE_FEE_TYPE.FREE]: '免费改期',
+  [RESCHEDULE_FEE_TYPE.CHARGED]: '收取调度费',
+  [RESCHEDULE_FEE_TYPE.FORBIDDEN]: '不可改期'
+}

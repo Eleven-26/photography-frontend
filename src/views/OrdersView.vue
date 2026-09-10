@@ -7,10 +7,32 @@ import BaseModal from '@/components/BaseModal.vue'
 import * as orderApi from '@/api/orders'
 import * as customerApi from '@/api/customers'
 import * as packageApi from '@/api/packages'
+import * as deliveryApi from '@/api/delivery'
 import { useFetch } from '@/composables/useFetch'
 import { money, formatDate, formatDateTime, initials, orderTone } from '@/utils/format'
-import { ORDER_STATUS, ORDER_STATUS_LABEL, PAYMENT_STATUS, PAYMENT_STATUS_LABEL, PACKAGE_STATUS } from '@/types'
-import type { Order, OrderLog, Payment, Refund, Customer, Package } from '@/types'
+import {
+  ORDER_STATUS,
+  ORDER_STATUS_LABEL,
+  PAYMENT_STATUS,
+  PAYMENT_STATUS_LABEL,
+  PACKAGE_STATUS,
+  RESCHEDULE_STATUS,
+  RESCHEDULE_STATUS_LABEL,
+  RESCHEDULE_FEE_TYPE_LABEL,
+  DELIVERY_STAGE_LABEL
+} from '@/types'
+import type {
+  Order,
+  OrderLog,
+  Payment,
+  Refund,
+  Customer,
+  Package,
+  OrderAddon,
+  OrderReschedule,
+  Delivery,
+  DeliveryItem
+} from '@/types'
 
 const route = useRoute()
 
@@ -67,29 +89,69 @@ const payTone: Record<number, string> = {
 
 const payTypeLabel: Record<string, string> = { deposit: '定金', final: '尾款', addon: '加片' }
 
-// ── 订单详情（后端返回包裹结构：order/payments/refunds/logs/delivery）──
+/** 加项分类（后端存字符串） */
+const ADDON_CATEGORY_LABEL: Record<string, string> = {
+  makeup: '妆造',
+  urgency: '时效',
+  service: '服务',
+  retouch: '精修'
+}
+
+const ADDON_CATEGORY_OPTIONS = Object.entries(ADDON_CATEGORY_LABEL).map(([value, label]) => ({ value, label }))
+
+// ── 订单详情（后端返回包裹结构：order/payments/refunds/logs/delivery + allowed_transitions）──
+type DetailTab = 'overview' | 'payments' | 'addons' | 'reschedule' | 'files' | 'logs'
+
 const detail = ref<Order | null>(null)
 const detailPayments = ref<Payment[]>([])
 const detailRefunds = ref<Refund[]>([])
 const detailLogs = ref<OrderLog[]>([])
+const detailAddons = ref<OrderAddon[]>([])
+const detailReschedules = ref<OrderReschedule[]>([])
+const detailItems = ref<DeliveryItem[]>([])
+const detailDelivery = ref<Delivery | null>(null)
+const detailAllowed = ref<number[]>([])
+const detailTab = ref<DetailTab>('overview')
 const detailOpen = ref(false)
 const loadingDetail = ref(false)
 const detailError = ref('')
 
-async function openDetail(o: Order) {
+const detailTabs = computed(
+  () =>
+    [
+      { key: 'overview', label: '概览', count: undefined },
+      { key: 'payments', label: '收款', count: detailPayments.value.length + detailRefunds.value.length },
+      { key: 'addons', label: '加项', count: detailAddons.value.length },
+      { key: 'reschedule', label: '改期', count: detailReschedules.value.length },
+      { key: 'files', label: '文件', count: detailItems.value.length },
+      { key: 'logs', label: '动态', count: detailLogs.value.length }
+    ] as { key: DetailTab; label: string; count?: number }[]
+)
+
+async function openDetail(orderId: number) {
   detailOpen.value = true
   detail.value = null
   detailPayments.value = []
   detailRefunds.value = []
   detailLogs.value = []
+  detailAddons.value = []
+  detailReschedules.value = []
+  detailItems.value = []
+  detailDelivery.value = null
+  detailAllowed.value = []
+  detailTab.value = 'overview'
   detailError.value = ''
   loadingDetail.value = true
   try {
-    const res = await orderApi.orderDetail(o.id)
+    const res = await orderApi.orderDetail(orderId)
     detail.value = res.order
     detailPayments.value = res.payments || []
     detailRefunds.value = res.refunds || []
     detailLogs.value = res.logs || []
+    detailDelivery.value = res.delivery
+    detailAllowed.value = res.allowed_transitions || []
+    // 关联集合并发补全：任一失败只影响对应 tab，不阻断主详情
+    void loadSubCollections(orderId)
   } catch (e) {
     detailError.value = e instanceof Error ? e.message : '订单详情加载失败'
   } finally {
@@ -97,7 +159,59 @@ async function openDetail(o: Order) {
   }
 }
 
-// ── 待确认订单 → 确认预约（0-待确认 → 1-待定金，后端状态机允许）──
+async function loadSubCollections(orderId: number) {
+  const [addons, reschedules, items] = await Promise.allSettled([
+    orderApi.listAddons(orderId),
+    orderApi.listReschedules(orderId),
+    deliveryApi.deliveryItems(orderId)
+  ])
+  if (addons.status === 'fulfilled') detailAddons.value = addons.value || []
+  if (reschedules.status === 'fulfilled') detailReschedules.value = reschedules.value || []
+  if (items.status === 'fulfilled') detailItems.value = items.value || []
+}
+
+/** 刷新详情并保持当前 tab（增项/改期/推进后调用） */
+async function refreshDetail(keepTab = true) {
+  if (!detail.value) return
+  const id = detail.value.id
+  const tab = detailTab.value
+  await openDetail(id)
+  if (keepTab) detailTab.value = tab
+}
+
+// ── 阶段推进（allowed_transitions 由后端领域状态机给出，前端不重复实现规则）──
+const advancing = ref(false)
+
+const ADVANCE_LABEL: Record<number, string> = {
+  [ORDER_STATUS.PENDING_DEPOSIT]: '确认预约',
+  [ORDER_STATUS.PENDING_SHOOT]: '进入待拍摄',
+  [ORDER_STATUS.SHOOTING]: '开始拍摄',
+  [ORDER_STATUS.RETOUCHING]: '进入精修',
+  [ORDER_STATUS.PENDING_DELIVERY]: '提交交付',
+  [ORDER_STATUS.COMPLETED]: '完成归档'
+}
+
+/** 取消单独处理（需填原因），不放进阶段推进按钮组 */
+const advanceTargets = computed(() => detailAllowed.value.filter((s) => s !== ORDER_STATUS.CANCELLED))
+const canCancel = computed(() => detailAllowed.value.includes(ORDER_STATUS.CANCELLED))
+
+async function advanceTo(target: number) {
+  if (!detail.value) return
+  const id = detail.value.id
+  advancing.value = true
+  try {
+    await orderApi.updateOrderStatus(id, target)
+    toastOk(`订单已更新为「${ORDER_STATUS_LABEL[target] || target}」`)
+    await pageRes.load()
+    await refreshDetail()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '状态更新失败')
+  } finally {
+    advancing.value = false
+  }
+}
+
+// ── 列表内「确认预约」快捷操作（0-待确认 → 1-待定金）──
 const confirmingID = ref<number | null>(null)
 
 async function confirmOrder(o: Order) {
@@ -107,7 +221,7 @@ async function confirmOrder(o: Order) {
     toastOk('已确认预约，订单进入待定金')
     await pageRes.load()
     if (detailOpen.value && detail.value?.id === o.id) {
-      await openDetail({ ...detail.value, status: ORDER_STATUS.PENDING_DEPOSIT })
+      await refreshDetail()
     }
   } catch (e) {
     toastErr(e instanceof Error ? e.message : '确认失败')
@@ -115,6 +229,180 @@ async function confirmOrder(o: Order) {
     confirmingID.value = null
   }
 }
+
+// ── 取消订单 ──
+const cancelOpen = ref(false)
+const cancelReason = ref('')
+const cancelSaving = ref(false)
+
+function openCancel() {
+  cancelReason.value = ''
+  cancelOpen.value = true
+}
+
+async function submitCancel() {
+  if (!detail.value) return
+  if (!cancelReason.value.trim()) {
+    toastErr('请填写取消原因')
+    return
+  }
+  cancelSaving.value = true
+  try {
+    await orderApi.cancelOrder(detail.value.id, cancelReason.value.trim())
+    toastOk('订单已取消')
+    cancelOpen.value = false
+    await pageRes.load()
+    await refreshDetail()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '取消失败')
+  } finally {
+    cancelSaving.value = false
+  }
+}
+
+// ── 加项（增删改后端同事务重算订单金额，前端不做本地累加）──
+const addonOpen = ref(false)
+const addonSaving = ref(false)
+const addonEditingID = ref<number | null>(null)
+const addonForm = reactive({ name: '', category: 'makeup', price: 0, qty: 1, confirmed: 0, remark: '' })
+
+function openAddonCreate() {
+  addonEditingID.value = null
+  addonForm.name = ''
+  addonForm.category = 'makeup'
+  addonForm.price = 0
+  addonForm.qty = 1
+  addonForm.confirmed = 0
+  addonForm.remark = ''
+  addonOpen.value = true
+}
+
+function openAddonEdit(a: OrderAddon) {
+  addonEditingID.value = a.id
+  addonForm.name = a.name
+  addonForm.category = a.category || 'makeup'
+  addonForm.price = a.price
+  addonForm.qty = a.qty
+  addonForm.confirmed = a.confirmed
+  addonForm.remark = a.remark
+  addonOpen.value = true
+}
+
+async function saveAddon() {
+  if (!detail.value) return
+  if (!addonForm.name.trim()) {
+    toastErr('请填写加项名称')
+    return
+  }
+  const payload = {
+    name: addonForm.name.trim(),
+    category: addonForm.category,
+    price: Number(addonForm.price) || 0,
+    qty: Number(addonForm.qty) || 1,
+    confirmed: addonForm.confirmed,
+    remark: addonForm.remark
+  }
+  addonSaving.value = true
+  try {
+    if (addonEditingID.value) {
+      await orderApi.updateAddon(addonEditingID.value, payload)
+    } else {
+      await orderApi.createAddon(detail.value.id, payload)
+    }
+    toastOk('已保存，订单金额已重算')
+    addonOpen.value = false
+    await refreshDetail()
+    await pageRes.load()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '保存失败')
+  } finally {
+    addonSaving.value = false
+  }
+}
+
+async function removeAddon(a: OrderAddon) {
+  if (!window.confirm(`确认删除加项「${a.name}」？订单金额将同步重算。`)) return
+  try {
+    await orderApi.deleteAddon(a.id)
+    toastOk('已删除，订单金额已重算')
+    await refreshDetail()
+    await pageRes.load()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '删除失败')
+  }
+}
+
+// ── 改期（PC 走改期单链路，不直接改订单拍摄日期）──
+const rescheduleOpen = ref(false)
+const rescheduleSaving = ref(false)
+const rescheduleForm = reactive({ new_date: '', new_time: '', reason_label: '', reason: '' })
+
+function openReschedule() {
+  rescheduleForm.new_date = ''
+  rescheduleForm.new_time = ''
+  rescheduleForm.reason_label = ''
+  rescheduleForm.reason = ''
+  rescheduleOpen.value = true
+}
+
+async function saveReschedule() {
+  if (!detail.value) return
+  if (!rescheduleForm.new_date || !rescheduleForm.new_time.trim()) {
+    toastErr('请选择新的拍摄日期与时段')
+    return
+  }
+  rescheduleSaving.value = true
+  try {
+    await orderApi.applyReschedule(detail.value.id, {
+      new_date: rescheduleForm.new_date,
+      new_time: rescheduleForm.new_time.trim(),
+      reason_label: rescheduleForm.reason_label || undefined,
+      reason: rescheduleForm.reason || undefined
+    })
+    toastOk('改期申请已提交')
+    rescheduleOpen.value = false
+    await refreshDetail()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '改期申请失败')
+  } finally {
+    rescheduleSaving.value = false
+  }
+}
+
+const auditingID = ref<number | null>(null)
+
+async function auditReschedule(r: OrderReschedule, approved: boolean) {
+  const tip = approved ? '确认同意该改期申请？' : '确认驳回该改期申请？'
+  if (!window.confirm(tip)) return
+  auditingID.value = r.id
+  try {
+    await orderApi.auditReschedule(r.id, approved)
+    toastOk(approved ? '已同意改期' : '已驳回改期')
+    await refreshDetail()
+    await pageRes.load()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '审批失败')
+  } finally {
+    auditingID.value = null
+  }
+}
+
+const rescheduleTone = (s: number) => {
+  if (s === RESCHEDULE_STATUS.PENDING) return 'status-pending'
+  if (s === RESCHEDULE_STATUS.APPROVED) return 'status-ok'
+  if (s === RESCHEDULE_STATUS.REJECTED) return 'status-error'
+  return 'status-disabled'
+}
+
+/** 文件大小（字节 → 人类可读） */
+function humanSize(n: number) {
+  if (!n || n <= 0) return '—'
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
+  return `${(n / 1024 / 1024).toFixed(1)} MB`
+}
+
+const fileKindLabel: Record<string, string> = { sample: '样片', selected: '已选', retouched: '精修成品' }
 
 // ── 新建订单（客户/套餐下拉走真实接口，不再使用演示数据）──
 const createOpen = ref(false)
@@ -298,7 +586,7 @@ async function saveOrder() {
                   >
                     {{ confirmingID === o.id ? '确认中' : '确认预约' }}
                   </button>
-                  <button class="btn btn-sm btn-outline" @click="openDetail(o)">详情</button>
+                  <button class="btn btn-sm btn-outline" @click="openDetail(o.id)">详情</button>
                 </div>
               </td>
             </tr>
@@ -344,71 +632,286 @@ async function saveOrder() {
         </div>
       </div>
 
-      <div class="drawer-body" v-else-if="detail">
-        <div class="detail-hero">
-          <div>
-            <div class="serif" style="font-size: 19px; font-weight: 700">{{ detail.customer_name }}</div>
-            <div class="muted xsmall mt-8">{{ detail.package_name }}</div>
-          </div>
-          <div style="text-align: right">
-            <div class="strong" style="font-size: 17px">{{ money(detail.total_amt) }}</div>
-            <span class="pill mt-8" :class="pillClass(detail.status)">{{ ORDER_STATUS_LABEL[detail.status] || '—' }}</span>
-          </div>
-        </div>
-
-        <div class="detail-grid">
-          <div class="field"><span class="field-label">订单号</span><span>{{ detail.code }}</span></div>
-          <div class="field"><span class="field-label">拍摄日期</span><span>{{ formatDate(detail.shoot_date) }} {{ detail.shoot_time }}</span></div>
-          <div class="field"><span class="field-label">拍摄地点</span><span>{{ detail.shoot_address || '—' }}</span></div>
-          <div class="field"><span class="field-label">主拍摄影师</span><span>{{ detail.photographer || '未分配' }}</span></div>
-          <div class="field"><span class="field-label">定金</span><span>{{ money(detail.deposit_amt) }}</span></div>
-          <div class="field"><span class="field-label">尾款</span><span>{{ money(detail.final_amt) }}</span></div>
-          <div class="field"><span class="field-label">已收 / 已退</span><span>{{ money(detail.paid_amt) }} / {{ money(detail.refund_amt) }}</span></div>
-          <div class="field"><span class="field-label">加片金额</span><span>{{ money(detail.addon_amount) }}</span></div>
-        </div>
-
-        <div class="divider"></div>
-        <div class="section-title" style="margin-top: 0"><h2>收款记录</h2><span>{{ detailPayments.length }} 笔</span></div>
-        <div v-if="detailPayments.length" class="pay-list">
-          <div v-for="p in detailPayments" :key="p.id" class="pay-row">
-            <span class="pill" :class="payTone[p.status] || 'status-disabled'">{{ PAYMENT_STATUS_LABEL[p.status] || p.status }}</span>
-            <span class="cell-main">{{ payTypeLabel[p.type] || p.type }}</span>
-            <span class="cell-sub">{{ formatDateTime(p.paid_at) || '—' }}</span>
-            <span class="strong" style="margin-left: auto">{{ money(p.amount) }}</span>
-          </div>
-        </div>
-        <div v-else class="empty-state"><strong>暂无收款记录</strong></div>
-
-        <div class="divider"></div>
-        <div class="section-title" style="margin-top: 0"><h2>动态时间线</h2></div>
-        <div v-if="detailLogs.length" class="timeline">
-          <div v-for="log in detailLogs" :key="log.id" class="tl-item">
-            <span class="tl-dot"></span>
+      <template v-else-if="detail">
+        <div class="drawer-body">
+          <div class="detail-hero">
             <div>
-              <div class="tl-content">{{ log.content }}</div>
-              <div class="tl-meta">{{ log.operator_name }}</div>
+              <div class="serif" style="font-size: 19px; font-weight: 700">{{ detail.customer_name }}</div>
+              <div class="muted xsmall mt-8">{{ detail.package_name }}</div>
+            </div>
+            <div style="text-align: right">
+              <div class="strong" style="font-size: 17px">{{ money(detail.total_amt) }}</div>
+              <span class="pill mt-8" :class="pillClass(detail.status)">{{ ORDER_STATUS_LABEL[detail.status] || '—' }}</span>
             </div>
           </div>
+
+          <div class="detail-tabs">
+            <button
+              v-for="t in detailTabs"
+              :key="t.key"
+              class="detail-tab"
+              :class="{ active: detailTab === t.key }"
+              @click="detailTab = t.key"
+            >
+              {{ t.label }}<span v-if="t.count !== undefined" class="detail-tab-count">{{ t.count }}</span>
+            </button>
+          </div>
+
+          <!-- 概览 -->
+          <div v-show="detailTab === 'overview'">
+            <div class="detail-grid">
+              <div class="field"><span class="field-label">订单号</span><span>{{ detail.code }}</span></div>
+              <div class="field"><span class="field-label">联系电话</span><span>{{ detail.customer_mobile || '—' }}</span></div>
+              <div class="field"><span class="field-label">拍摄日期</span><span>{{ formatDate(detail.shoot_date) }} {{ detail.shoot_time }}</span></div>
+              <div class="field"><span class="field-label">拍摄地点</span><span>{{ detail.shoot_address || '—' }}</span></div>
+              <div class="field"><span class="field-label">主拍摄影师</span><span>{{ detail.photographer || '未分配' }}</span></div>
+              <div class="field"><span class="field-label">套餐基础价</span><span>{{ money(detail.base_price) }}</span></div>
+              <div class="field"><span class="field-label">加项合计</span><span>{{ money(detail.addon_amount) }}</span></div>
+              <div class="field"><span class="field-label">定金</span><span>{{ money(detail.deposit_amt) }}</span></div>
+              <div class="field"><span class="field-label">尾款</span><span>{{ money(detail.final_amt) }}</span></div>
+              <div class="field"><span class="field-label">已收 / 已退</span><span>{{ money(detail.paid_amt) }} / {{ money(detail.refund_amt) }}</span></div>
+              <div class="field"><span class="field-label">交付阶段</span><span>{{ detailDelivery ? DELIVERY_STAGE_LABEL[detailDelivery.stage] || '—' : '未创建交付单' }}</span></div>
+            </div>
+            <div class="field" style="margin-top: 4px">
+              <span class="field-label">备注</span>
+              <span>{{ detail.remark || '—' }}</span>
+            </div>
+          </div>
+
+          <!-- 收款 / 退款 -->
+          <div v-show="detailTab === 'payments'">
+            <div class="section-title" style="margin-top: 0"><h2>收款记录</h2><span>{{ detailPayments.length }} 笔</span></div>
+            <div v-if="detailPayments.length" class="pay-list">
+              <div v-for="p in detailPayments" :key="p.id" class="pay-row">
+                <span class="pill" :class="payTone[p.status] || 'status-disabled'">{{ PAYMENT_STATUS_LABEL[p.status] || p.status }}</span>
+                <span class="cell-main">{{ payTypeLabel[p.type] || p.type }}</span>
+                <span class="cell-sub">{{ formatDateTime(p.paid_at) || '—' }}</span>
+                <span class="strong" style="margin-left: auto">{{ money(p.amount) }}</span>
+              </div>
+            </div>
+            <div v-else class="empty-state"><strong>暂无收款记录</strong></div>
+
+            <div class="section-title"><h2>退款记录</h2><span>{{ detailRefunds.length }} 笔</span></div>
+            <div v-if="detailRefunds.length" class="pay-list">
+              <div v-for="r in detailRefunds" :key="r.id" class="pay-row">
+                <span class="cell-main">{{ r.reason || '—' }}</span>
+                <span class="cell-sub">{{ formatDateTime(r.refund_at) || '—' }}</span>
+                <span class="strong" style="margin-left: auto">{{ money(r.amount) }}</span>
+              </div>
+            </div>
+            <div v-else class="empty-state"><strong>暂无退款记录</strong></div>
+          </div>
+
+          <!-- 加项 -->
+          <div v-show="detailTab === 'addons'">
+            <div class="section-title" style="margin-top: 0">
+              <h2>加项明细</h2>
+              <button class="btn btn-sm btn-primary" @click="openAddonCreate">+ 新增加项</button>
+            </div>
+            <div v-if="detailAddons.length" class="pay-list">
+              <div v-for="a in detailAddons" :key="a.id" class="pay-row">
+                <span class="pill status-info">{{ ADDON_CATEGORY_LABEL[a.category] || a.category || '其他' }}</span>
+                <span class="cell-main">{{ a.name }}</span>
+                <span class="cell-sub">{{ money(a.price) }} × {{ a.qty }}</span>
+                <span class="pill" :class="a.confirmed ? 'status-ok' : 'status-disabled'">{{ a.confirmed ? '客户已确认' : '待确认' }}</span>
+                <span class="strong">{{ money(a.amount) }}</span>
+                <div class="flex gap-6" style="margin-left: auto">
+                  <button class="btn btn-sm btn-outline" @click="openAddonEdit(a)">编辑</button>
+                  <button class="btn btn-sm btn-ghost" @click="removeAddon(a)">删除</button>
+                </div>
+              </div>
+            </div>
+            <div v-else class="empty-state"><strong>暂无加项</strong><p>加项金额会计入订单总额与尾款。</p></div>
+            <div v-if="detailAddons.length" class="addon-total">
+              加项合计 <span class="strong">{{ money(detail.addon_amount) }}</span>
+            </div>
+          </div>
+
+          <!-- 改期 -->
+          <div v-show="detailTab === 'reschedule'">
+            <div class="section-title" style="margin-top: 0">
+              <h2>改期记录</h2>
+              <button class="btn btn-sm btn-primary" @click="openReschedule">+ 发起改期</button>
+            </div>
+            <div v-if="detailReschedules.length" class="pay-list">
+              <div v-for="r in detailReschedules" :key="r.id" class="rs-card">
+                <div class="flex gap-6" style="align-items: center">
+                  <span class="cell-main">{{ r.original_date }} {{ r.original_time || '' }}</span>
+                  <span class="muted">→</span>
+                  <span class="cell-main strong">{{ r.new_date }} {{ r.new_time }}</span>
+                  <span class="pill" :class="rescheduleTone(r.status)">{{ RESCHEDULE_STATUS_LABEL[r.status] || r.status }}</span>
+                  <span class="pill status-disabled">{{ RESCHEDULE_FEE_TYPE_LABEL[r.fee_type] || '—' }}</span>
+                  <span v-if="r.fee_amount > 0" class="cell-sub">调度费 {{ money(r.fee_amount) }}</span>
+                </div>
+                <div class="cell-sub mt-8">
+                  {{ r.reason_label || '未分类' }}{{ r.reason ? ` · ${r.reason}` : '' }} ·
+                  {{ r.apply_source === 1 ? '管理端发起' : '客户申请' }}
+                </div>
+                <div v-if="r.audit_name" class="cell-sub mt-8">审批：{{ r.audit_name }}{{ r.audit_remark ? ` · ${r.audit_remark}` : '' }}</div>
+                <div v-if="r.status === RESCHEDULE_STATUS.PENDING" class="flex gap-6 mt-8">
+                  <button class="btn btn-sm btn-primary" :disabled="auditingID === r.id" @click="auditReschedule(r, true)">同意</button>
+                  <button class="btn btn-sm btn-outline" :disabled="auditingID === r.id" @click="auditReschedule(r, false)">驳回</button>
+                </div>
+              </div>
+            </div>
+            <div v-else class="empty-state">
+              <strong>暂无改期记录</strong>
+              <p>改期会同步重排档期锁，不要直接修改订单拍摄日期。</p>
+            </div>
+          </div>
+
+          <!-- 文件 -->
+          <div v-show="detailTab === 'files'">
+            <div class="section-title" style="margin-top: 0"><h2>交付文件</h2><span>{{ detailItems.length }} 个</span></div>
+            <div v-if="detailItems.length" class="file-list">
+              <a v-for="f in detailItems" :key="f.id" class="file-row" :href="f.url" target="_blank" rel="noopener">
+                <span class="pill status-info">{{ fileKindLabel[f.kind] || f.kind || '文件' }}</span>
+                <span class="cell-main">{{ f.filename || f.url }}</span>
+                <span class="cell-sub">{{ humanSize(f.size) }}</span>
+                <span v-if="f.is_selected" class="pill status-ok">已选</span>
+                <span v-if="f.feedback_status === 1" class="pill status-pending">待处理反馈</span>
+              </a>
+            </div>
+            <div v-else class="empty-state">
+              <strong>暂无交付文件</strong>
+              <p>交付单尚未创建或未上传文件。</p>
+            </div>
+          </div>
+
+          <!-- 动态 -->
+          <div v-show="detailTab === 'logs'">
+            <div class="section-title" style="margin-top: 0"><h2>动态时间线</h2></div>
+            <div v-if="detailLogs.length" class="timeline">
+              <div v-for="log in detailLogs" :key="log.id" class="tl-item">
+                <span class="tl-dot"></span>
+                <div>
+                  <div class="tl-content">{{ log.content }}</div>
+                  <div class="tl-meta">{{ log.operator_name }}{{ log.created_at ? ` · ${formatDateTime(log.created_at)}` : '' }}</div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="empty-state"><strong>暂无动态</strong></div>
+          </div>
         </div>
-        <div v-else class="empty-state"><strong>暂无动态</strong></div>
-      </div>
+      </template>
 
       <div class="drawer-body" v-else style="display: grid; place-items: center; color: var(--muted)">
         <span class="icon spin"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /></svg></span>
       </div>
 
-      <div class="drawer-foot">
-        <button
-          v-if="detail && detail.status === ORDER_STATUS.PENDING_CONFIRM"
-          class="btn btn-primary"
-          :disabled="confirmingID === detail.id"
-          @click="confirmOrder(detail)"
-        >
-          {{ confirmingID === detail.id ? '确认中…' : '确认预约' }}
-        </button>
+      <div class="drawer-foot drawer-foot-wrap">
+        <template v-if="detail">
+          <button
+            v-for="s in advanceTargets"
+            :key="s"
+            class="btn btn-sm btn-primary"
+            :disabled="advancing"
+            @click="advanceTo(s)"
+          >
+            {{ ADVANCE_LABEL[s] || ORDER_STATUS_LABEL[s] }}
+          </button>
+          <button v-if="canCancel" class="btn btn-sm btn-ghost" :disabled="advancing" @click="openCancel">取消订单</button>
+        </template>
         <button class="btn btn-ghost" style="margin-left: auto" @click="detailOpen = false">关闭</button>
       </div>
     </div>
+
+    <!-- 加项弹窗 -->
+    <BaseModal :open="addonOpen" :title="addonEditingID ? '编辑加项' : '新增加项'" @close="addonOpen = false">
+      <form id="addon-form" class="form-grid form-grid-2" @submit.prevent="saveAddon">
+        <div class="field">
+          <label class="field-label"><span class="req">*</span> 名称</label>
+          <input v-model="addonForm.name" class="input" placeholder="如 加拍 1 小时" />
+        </div>
+        <div class="field">
+          <label class="field-label">分类</label>
+          <select v-model="addonForm.category" class="select">
+            <option v-for="c in ADDON_CATEGORY_OPTIONS" :key="c.value" :value="c.value">{{ c.label }}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">单价（元）</label>
+          <input v-model.number="addonForm.price" class="input" type="number" min="0" step="0.01" />
+        </div>
+        <div class="field">
+          <label class="field-label">数量</label>
+          <input v-model.number="addonForm.qty" class="input" type="number" min="1" />
+        </div>
+        <div class="field">
+          <label class="field-label">客户确认</label>
+          <select v-model.number="addonForm.confirmed" class="select">
+            <option :value="0">待确认</option>
+            <option :value="1">已确认</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">小计</label>
+          <span class="strong" style="padding-top: 6px">{{ money((Number(addonForm.price) || 0) * (Number(addonForm.qty) || 0)) }}</span>
+        </div>
+        <div class="field" style="grid-column: 1 / -1">
+          <label class="field-label">备注</label>
+          <textarea v-model="addonForm.remark" class="input" rows="2" placeholder="可选"></textarea>
+        </div>
+      </form>
+      <template #foot>
+        <button class="btn btn-ghost" @click="addonOpen = false">取消</button>
+        <button class="btn btn-primary" type="submit" form="addon-form" :disabled="addonSaving">
+          {{ addonSaving ? '保存中…' : '保存' }}
+        </button>
+      </template>
+    </BaseModal>
+
+    <!-- 改期申请弹窗 -->
+    <BaseModal :open="rescheduleOpen" title="发起改期" @close="rescheduleOpen = false">
+      <form id="reschedule-form" class="form-grid form-grid-2" @submit.prevent="saveReschedule">
+        <div class="field">
+          <label class="field-label">当前档期</label>
+          <span style="padding-top: 6px">{{ detail ? `${formatDate(detail.shoot_date)} ${detail.shoot_time || ''}` : '—' }}</span>
+        </div>
+        <div class="field">
+          <label class="field-label"><span class="req">*</span> 新拍摄日期</label>
+          <input v-model="rescheduleForm.new_date" class="input" type="date" />
+        </div>
+        <div class="field">
+          <label class="field-label"><span class="req">*</span> 新时段</label>
+          <input v-model="rescheduleForm.new_time" class="input" placeholder="如 10:00-12:30" />
+        </div>
+        <div class="field">
+          <label class="field-label">原因分类</label>
+          <input v-model="rescheduleForm.reason_label" class="input" placeholder="如 客户临时有事" />
+        </div>
+        <div class="field" style="grid-column: 1 / -1">
+          <label class="field-label">原因说明</label>
+          <textarea v-model="rescheduleForm.reason" class="input" rows="2" placeholder="可选"></textarea>
+        </div>
+        <p class="xsmall muted" style="grid-column: 1 / -1">
+          改期提交后需审批；审批通过才会重排档期锁并更新订单拍摄日期。
+        </p>
+      </form>
+      <template #foot>
+        <button class="btn btn-ghost" @click="rescheduleOpen = false">取消</button>
+        <button class="btn btn-primary" type="submit" form="reschedule-form" :disabled="rescheduleSaving">
+          {{ rescheduleSaving ? '提交中…' : '提交申请' }}
+        </button>
+      </template>
+    </BaseModal>
+
+    <!-- 取消订单弹窗 -->
+    <BaseModal :open="cancelOpen" title="取消订单" @close="cancelOpen = false">
+      <form id="cancel-form" class="form-grid" @submit.prevent="submitCancel">
+        <div class="field">
+          <label class="field-label"><span class="req">*</span> 取消原因</label>
+          <textarea v-model="cancelReason" class="input" rows="3" placeholder="请填写取消原因，将记入订单动态"></textarea>
+        </div>
+        <p class="xsmall muted">订单取消后不可恢复，如需退款请单独发起退款申请。</p>
+      </form>
+      <template #foot>
+        <button class="btn btn-ghost" @click="cancelOpen = false">返回</button>
+        <button class="btn btn-primary" type="submit" form="cancel-form" :disabled="cancelSaving">
+          {{ cancelSaving ? '提交中…' : '确认取消' }}
+        </button>
+      </template>
+    </BaseModal>
 
     <!-- 新建订单弹窗 -->
     <BaseModal :open="createOpen" title="新建订单" @close="createOpen = false">
@@ -476,6 +979,39 @@ async function saveOrder() {
   padding: 18px 0 4px;
 }
 
+.detail-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 14px 0 6px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+
+.detail-tab {
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.detail-tab:hover {
+  background: var(--line);
+}
+
+.detail-tab.active {
+  background: var(--orange);
+  color: var(--white);
+}
+
+.detail-tab-count {
+  margin-left: 5px;
+  opacity: 0.75;
+}
+
 .pay-list {
   display: flex;
   flex-direction: column;
@@ -490,6 +1026,44 @@ async function saveOrder() {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
+  font-size: 12px;
+}
+
+.rs-card {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 2px;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.file-row:hover {
+  border-color: var(--orange);
+}
+
+.addon-total {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 10px;
   font-size: 12px;
 }
 
@@ -535,5 +1109,10 @@ async function saveOrder() {
 
 .data-source-tip.error {
   color: var(--red, #c0392b);
+}
+
+.drawer-foot-wrap {
+  flex-wrap: wrap;
+  gap: 8px;
 }
 </style>

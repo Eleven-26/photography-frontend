@@ -46,7 +46,16 @@ export const API_PATHS = {
     create: 'order/create',
     update: 'order/update',
     status: 'order/status',
-    cancel: 'order/cancel'
+    cancel: 'order/cancel',
+    // 加项（增删改同事务重算订单金额）
+    addonList: 'order/addon/list',
+    addonCreate: 'order/addon/create',
+    addonUpdate: 'order/addon/update',
+    addonDelete: 'order/addon/delete',
+    // 改期（统一走改期单链路，不直接改订单日期）
+    rescheduleList: 'order/reschedule/list',
+    rescheduleApply: 'order/reschedule/apply',
+    rescheduleAudit: 'order/reschedule/audit'
   },
   // 套餐（package 为保留字，仅作对象 key，属性访问合法）
   package: {
@@ -62,6 +71,8 @@ export const API_PATHS = {
   payment: { confirm: 'payment/confirm' },
   // 退款
   refund: { audit: 'refund/audit' },
+  // 交付（detail / items 的 id 都是 order_id：按订单反查交付单）
+  delivery: { detail: 'delivery/detail', items: 'delivery/items' },
   // 档期
   calendar: { list: 'calendar/list', lock: 'calendar/lock', cancel: 'calendar/cancel' },
   // 作品
