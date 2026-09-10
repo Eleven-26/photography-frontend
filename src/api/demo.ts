@@ -173,6 +173,7 @@ export function demoFinanceSummary(): FinanceSummary {
   return {
     month_receivable: 11680,
     month_received: 360,
+    month_remaining: 11320,
     pending_verify_count: 1,
     pending_verify_amount: 536,
     refunding_count: 1,

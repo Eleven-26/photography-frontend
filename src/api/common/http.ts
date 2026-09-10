@@ -82,3 +82,54 @@ export const post = <T>(url: string, data?: unknown) =>
 // 因此列表接口也必须用 rpc() 传 body，不要用 axios 的 params。
 export const rpc = <T>(apiPath: string, data?: unknown, id?: number | string) =>
   request<T>({ url: `${API_PREFIX}/${apiPath}${id != null ? `/${id}` : ''}`, method: 'POST', data })
+
+/**
+ * 文件下载：POST 参数走 body（与 rpc 一致），响应体按二进制流保存为本地文件。
+ * 后端在出错时返回的是 JSON（不是流），此处识别后抛出 ApiError，
+ * 避免把一段错误 JSON 存成 .csv 文件。
+ */
+export async function download(apiPath: string, data?: unknown, fallbackName = 'export.csv'): Promise<void> {
+  const res = await http.request<Blob>({
+    url: `${API_PREFIX}/${apiPath}`,
+    method: 'POST',
+    data,
+    responseType: 'blob'
+  })
+
+  const blob = res.data
+  if (blob.type.includes('application/json')) {
+    const text = await blob.text()
+    try {
+      const body = JSON.parse(text) as ApiResponse
+      throw new ApiError(Number(body.code ?? -1), body.msg || '导出失败', body)
+    } catch (e) {
+      if (e instanceof ApiError) throw e
+      throw new ApiError(-1, '导出失败')
+    }
+  }
+
+  const filename = filenameFromDisposition(res.headers?.['content-disposition']) || fallbackName
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+/** 从 Content-Disposition 解析文件名（优先 RFC 5987 的 filename*） */
+function filenameFromDisposition(disposition?: string): string {
+  if (!disposition) return ''
+  const star = /filename\*=UTF-8''([^;]+)/i.exec(disposition)
+  if (star?.[1]) {
+    try {
+      return decodeURIComponent(star[1])
+    } catch {
+      /* 解码失败则回退到普通 filename */
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(disposition)
+  return plain?.[1] || ''
+}

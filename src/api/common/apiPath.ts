@@ -78,15 +78,41 @@ export const API_PATHS = {
     status: 'package/status'
   },
   // 财务
-  finance: { summary: 'finance/summary', payments: 'finance/payments', refunds: 'finance/refunds' },
+  finance: {
+    summary: 'finance/summary',
+    payments: 'finance/payments',
+    refunds: 'finance/refunds',
+    /** 导出对账 CSV（二进制流，走 download() 而非 rpc()） */
+    export: 'finance/export'
+  },
   // 收款
   payment: { confirm: 'payment/confirm' },
   // 退款
   refund: { audit: 'refund/audit' },
   // 交付（detail / items 的 id 都是 order_id：按订单反查交付单）
-  delivery: { detail: 'delivery/detail', items: 'delivery/items' },
+  delivery: {
+    list: 'delivery/list',
+    /** 新建交付任务（:order_id） */
+    create: 'delivery/create',
+    /** 提醒负责人（:id 为交付单ID） */
+    remind: 'delivery/remind',
+    detail: 'delivery/detail',
+    items: 'delivery/items',
+    uploadSamples: 'delivery/upload-samples',
+    select: 'delivery/select',
+    uploadRetouched: 'delivery/upload-retouched',
+    confirm: 'delivery/confirm'
+  },
   // 档期
-  calendar: { list: 'calendar/list', lock: 'calendar/lock', cancel: 'calendar/cancel' },
+  calendar: {
+    list: 'calendar/list',
+    lock: 'calendar/lock',
+    cancel: 'calendar/cancel',
+    // 档期规则（排班时段模板）
+    slotTemplateList: 'calendar/slot-template/list',
+    slotTemplateSave: 'calendar/slot-template/save',
+    slotTemplateDelete: 'calendar/slot-template/delete'
+  },
   // 作品
   asset: {
     list: 'asset/list',
@@ -105,7 +131,17 @@ export const API_PATHS = {
   },
   // 设置
   settings: {
-    operationLogList: 'settings/operation-log/list'
+    workspace: 'settings/workspace',
+    companyUpdate: 'settings/company/update',
+    operationLogList: 'settings/operation-log/list',
+    // 工作室设置（预约主页 / 接单规则 / 改期政策）
+    studioGet: 'settings/studio/get',
+    studioUpdate: 'settings/studio/update',
+    // 收款方式
+    paymentMethodList: 'settings/payment-method/list',
+    paymentMethodCreate: 'settings/payment-method/create',
+    paymentMethodUpdate: 'settings/payment-method/update',
+    paymentMethodDelete: 'settings/payment-method/delete'
   },
   // 工作台
   dashboard: { overview: 'dashboard/overview' }

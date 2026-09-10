@@ -1,5 +1,5 @@
 import { rpc } from './common/http'
-import type { CalendarSlot } from '@/types'
+import type { CalendarSlot, SlotTemplate } from '@/types'
 import { API_PATHS } from './common/apiPath'
 
 export interface CalendarListParams {
@@ -27,4 +27,31 @@ export function lockCalendar(data: {
 
 export function cancelCalendar(id: number) {
   return rpc<null>(API_PATHS.calendar.cancel, {}, id)
+}
+
+// ── 档期规则（排班时段模板）──────────────────────────
+
+export interface SlotTemplateParams {
+  /** 摄影师ID，0=全店通用 */
+  photographer_id?: number
+  /** 星期几 0-周日 ... 6-周六 */
+  weekday: number
+  start_time: string
+  end_time: string
+  /** 1-启用 0-停用 */
+  status?: number
+}
+
+/** 档期时段模板列表 */
+export function listSlotTemplates(photographerId = 0) {
+  return rpc<SlotTemplate[]>(API_PATHS.calendar.slotTemplateList, { photographer_id: photographerId })
+}
+
+/** 新建（不传 id）/ 更新（传 id）档期时段模板 */
+export function saveSlotTemplate(data: SlotTemplateParams, id?: number) {
+  return rpc<SlotTemplate>(API_PATHS.calendar.slotTemplateSave, data, id)
+}
+
+export function deleteSlotTemplate(id: number) {
+  return rpc<null>(API_PATHS.calendar.slotTemplateDelete, {}, id)
 }

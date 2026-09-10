@@ -243,3 +243,37 @@ export const RESCHEDULE_FEE_TYPE_LABEL: Record<number, string> = {
   [RESCHEDULE_FEE_TYPE.CHARGED]: '收取调度费',
   [RESCHEDULE_FEE_TYPE.FORBIDDEN]: '不可改期'
 }
+
+/** 星期（0-周日 ... 6-周六），与后端 model.SlotTemplate.weekday 对齐 */
+export const WEEKDAY_LABEL: Record<number, string> = {
+  0: '周日',
+  1: '周一',
+  2: '周二',
+  3: '周三',
+  4: '周四',
+  5: '周五',
+  6: '周六'
+}
+
+/** 档期时段模板状态 */
+export const SLOT_TEMPLATE_STATUS = {
+  DISABLED: 0, // 停用
+  ENABLED: 1 // 启用
+} as const
+
+/** 收款方式类型（model.PaymentMethod.type，存字符串） */
+export const PAYMENT_METHOD_TYPE = {
+  WECHAT: 'wechat',
+  ALIPAY: 'alipay',
+  BANK: 'bank',
+  CASH: 'cash',
+  OTHER: 'other'
+} as const
+
+export const PAYMENT_METHOD_TYPE_LABEL: Record<string, string> = {
+  [PAYMENT_METHOD_TYPE.WECHAT]: '微信收款码',
+  [PAYMENT_METHOD_TYPE.ALIPAY]: '支付宝收款码',
+  [PAYMENT_METHOD_TYPE.BANK]: '银行卡',
+  [PAYMENT_METHOD_TYPE.CASH]: '现金',
+  [PAYMENT_METHOD_TYPE.OTHER]: '其他'
+}

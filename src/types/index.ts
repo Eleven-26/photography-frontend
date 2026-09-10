@@ -39,7 +39,11 @@ export {
   RESCHEDULE_STATUS,
   RESCHEDULE_STATUS_LABEL,
   RESCHEDULE_FEE_TYPE,
-  RESCHEDULE_FEE_TYPE_LABEL
+  RESCHEDULE_FEE_TYPE_LABEL,
+  WEEKDAY_LABEL,
+  SLOT_TEMPLATE_STATUS,
+  PAYMENT_METHOD_TYPE,
+  PAYMENT_METHOD_TYPE_LABEL
 } from '@/constants/enums'
 
 /** 统一响应体 — 与后端 response.Body 对齐 */
@@ -87,10 +91,16 @@ export interface SysCompany {
   id: number
   name: string
   logo: string
+  /** 所在城市 */
+  city: string
+  /** 工作室简介 */
+  intro: string
   contact_name: string
   contact_phone: string
   address: string
   status: number
+  /** 后端 model.Base 携带，设置页「创建于」用 */
+  created_at?: string
 }
 
 export interface SysStore {
@@ -327,13 +337,29 @@ export interface Delivery {
   customer_id: number
   customer_name: string
   stage: DeliveryStage // 1-待上传样片 2-客户选片中 3-精修进行中 4-待确认交付 5-已交付
+  /** 原片数量（计划值，建单时录入） */
+  raw_count: number
+  /** 计划精修张数 */
+  retouch_target: number
   sample_count: number
   selected_count: number
   retouched_count: number
+  extra_selected_count: number
+  extra_fee: number
+  select_deadline?: string | null
+  retouch_version: number
   selected_at?: string | null
   delivered_at?: string | null
   remark: string
   operator_id: number
+}
+
+// ──── 交付看板条目（biz_delivery JOIN biz_order 快照）──
+/** 交付工作台列表项：交付单 + 订单编号/套餐/拍摄日期 */
+export interface DeliveryListItem extends Delivery {
+  order_code: string
+  package_name: string
+  shoot_date: string
 }
 
 // ──── 订单详情（后端 dto.OrderDetail 包裹结构）────
@@ -523,8 +549,13 @@ export interface DashboardOverview {
 
 // ──── 财务汇总 ────────────────────────────────────
 export interface FinanceSummary {
+  /** 本月应收（本月成交订单总额） */
   month_receivable: number
+  /** 本月已确认到账 */
   month_received: number
+  /** 本月剩余应收 = 应收 - 已收（负数归零） */
+  month_remaining: number
+  /** 待核验申报笔数（不计入已收，但已包含在应收内） */
   pending_verify_count: number
   pending_verify_amount: number
   refunding_count: number
@@ -547,6 +578,68 @@ export interface CalendarSlot {
   status: number // 档期状态 1-已锁定 2-已取消
   remark: string
   operator_id: number
+}
+
+// ──── 档期规则 / 工作室设置 / 收款方式 ──────────────
+
+/** 档期时段模板（biz_slot_template）：按星期几定义常规可约时段 */
+export interface SlotTemplate {
+  id: number
+  company_id: number
+  store_id: number
+  /** 摄影师ID，0=全店通用 */
+  photographer_id: number
+  /** 星期几 0-周日 1-周一 ... 6-周六 */
+  weekday: number
+  /** 开始时间 HH:mm */
+  start_time: string
+  /** 结束时间 HH:mm */
+  end_time: string
+  /** 1-启用 0-停用 */
+  status: number
+}
+
+/** 工作室设置（biz_studio_setting）：预约主页 / 接单规则 / 改期政策 */
+export interface StudioSetting {
+  id: number
+  company_id: number
+  slogan: string
+  intro: string
+  /** 预约主页短链标识，非空即视为已发布 */
+  homepage_slug: string
+  /** 接收新预约 0-暂停 1-接收 */
+  accept_new: number
+  lock_minutes: number
+  reschedule_free_hours: number
+  reschedule_fee_rate: number
+  reschedule_min_hours: number
+  select_deadline_hours: number
+  retain_days: number
+  faq: string
+  service_flow: string
+}
+
+/** 收款方式（biz_payment_method） */
+export interface PaymentMethod {
+  id: number
+  company_id: number
+  name: string
+  /** 类型 wechat-微信 alipay-支付宝 bank-银行转账 cash-现金 other-其他 */
+  type: string
+  account_name: string
+  account_no: string
+  qrcode: string
+  /** 1-启用 0-停用 */
+  status: number
+  sort: number
+}
+
+/** 工作空间聚合（settings/workspace） */
+export interface Workspace {
+  company: SysCompany
+  stores: SysStore[] | null
+  roles: SysRole[] | null
+  payment_methods: PaymentMethod[] | null
 }
 
 // ──── 前端路由用的状态标签映射（数字 key，见 @/constants/enums）──

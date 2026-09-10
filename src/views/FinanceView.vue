@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
@@ -39,6 +39,28 @@ const refundTone: Record<number, string> = {
   [REFUND_STATUS.APPROVED]: 'status-ok',
   [REFUND_STATUS.DONE]: 'status-ok',
   [REFUND_STATUS.REJECTED]: 'status-error'
+}
+
+/** 本月回款完成率（应收为 0 时记 100%，避免除零显示 NaN） */
+const receivedRate = computed(() => {
+  const receivable = overview.data?.month_receivable || 0
+  if (!receivable) return 100
+  return Math.round(((overview.data?.month_received || 0) / receivable) * 100)
+})
+
+/* ── 导出对账 CSV ─────────────────────────────── */
+const exporting = ref(false)
+
+async function doExport() {
+  exporting.value = true
+  try {
+    await financeApi.exportFinance()
+    toastOk('对账文件已开始下载')
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '导出失败')
+  } finally {
+    exporting.value = false
+  }
 }
 
 const typeLabel: Record<string, string> = {
@@ -99,6 +121,10 @@ async function doAudit(approved: boolean) {
         <p>收款核验与退款审批。</p>
       </div>
       <div class="page-actions">
+        <button class="btn btn-outline" :disabled="exporting" @click="doExport">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16" /></svg>
+          {{ exporting ? '导出中…' : '导出对账' }}
+        </button>
         <button class="btn btn-outline" @click="reloadAll">
           <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
           刷新
@@ -116,15 +142,17 @@ async function doAudit(approved: boolean) {
       <div class="stat-card">
         <div class="stat-head"><span class="stat-icon tone-mint"><svg class="icon" viewBox="0 0 24 24"><path d="M6 4h12v16H6V4Zm0 5h12M9 14h6" /></svg></span>本月应收</div>
         <div class="stat-value">¥{{ (overview.data?.month_receivable || 0).toLocaleString() }}</div>
+        <div class="stat-sub">本月成交订单总额</div>
       </div>
       <div class="stat-card">
-        <div class="stat-head"><span class="stat-icon tone-orange"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></svg></span>已到账</div>
+        <div class="stat-head"><span class="stat-icon tone-orange"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></svg></span>已确认到账</div>
         <div class="stat-value">¥{{ (overview.data?.month_received || 0).toLocaleString() }}</div>
+        <div class="stat-sub">完成率 {{ receivedRate }}%</div>
       </div>
       <div class="stat-card">
-        <div class="stat-head"><span class="stat-icon tone-lav"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18" /></svg></span>待核验</div>
-        <div class="stat-value">{{ overview.data?.pending_verify_count || 0 }} 笔</div>
-        <div class="stat-sub">¥{{ (overview.data?.pending_verify_amount || 0).toLocaleString() }}</div>
+        <div class="stat-head"><span class="stat-icon tone-lav"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18" /></svg></span>剩余应收</div>
+        <div class="stat-value">¥{{ (overview.data?.month_remaining || 0).toLocaleString() }}</div>
+        <div class="stat-sub">待核验 {{ overview.data?.pending_verify_count || 0 }} 笔 · ¥{{ (overview.data?.pending_verify_amount || 0).toLocaleString() }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-head"><span class="stat-icon tone-red"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M9 11h6M10 21h4a1 1 0 0 0 1-1v-5h4M9 20a1 1 0 0 1-1-1v-5H4" /></svg></span>退款中</div>
