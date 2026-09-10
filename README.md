@@ -1,6 +1,6 @@
 # SLOT · 摄影师工作室后台管理（前端）
 
-Vue 3 + TypeScript（组合式 API）+ Vite 构建的摄影师工作室后台管理界面，与 Go/Gin 后端（独立仓库 `D:\www\photography`）前后端分离部署。后端未启动时前端可依托演示数据独立运行与演示。
+Vue 3 + TypeScript（组合式 API）+ Vite 构建的摄影师工作室后台管理界面，与 Go/Gin 后端（独立仓库 `D:\www\photography`）前后端分离部署。**前端已移除全部演示数据，所有页面均依赖后端真实接口，后端未启动则页面报错而非展示假数据。**
 
 ## 技术栈
 
@@ -35,15 +35,14 @@ npm run preview      # 本地预览构建产物
 | 文件 | 变量 | 说明 |
 | --- | --- | --- |
 | `.env.development` | `VITE_API_BASE_URL` | Vite 代理目标，默认 `http://localhost:8080` |
-| `.env.development` | `VITE_DEMO_USERNAME` / `VITE_DEMO_PASSWORD` | 登录页演示账号提示 |
 | `.env.production` | `VITE_API_BASE_URL` | 生产为 `/api`，由 Nginx 反向代理转发，无需写死后端地址 |
 
-## 演示模式（后端未启动可独立运行）
+## 数据获取约定
 
-- 数据获取统一走 `src/composables/useFetch.ts`：优先请求后端 API，失败时自动回退到 `src/api/demo.ts` 的演示数据；`401/403` 不回退，交由全局拦截器跳转登录。
-- 回退到演示数据时，页面顶部显示"演示数据（后端未连接）"来源提示。
-- 演示模式下写操作（订单创建、退款审批、收款核验等）返回演示成功，便于完整走通交互流程。
-- 连接后端后自动切换为实时数据，无需改代码。
+- 统一走 `src/composables/useFetch.ts`：直接请求后端接口（RPC 风格），**失败即如实报错并清空数据**，不做任何演示数据回退。
+- 这样可避免「接口挂了但页面还有上一轮的数」的假象，排障时错误一眼可见。
+- `401/403` 由全局 HTTP 拦截器接管（跳转登录），不在页面层处理。
+- 生产包不携带任何 mock（`src/api/demo.ts` 已删除）。
 
 ## 目录结构
 
