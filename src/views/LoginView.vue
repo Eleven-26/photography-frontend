@@ -12,7 +12,7 @@ const form = reactive({ username: '', password: '' })
 const busy = ref(false)
 const error = ref('')
 const hint = ref(
-  '演示账号：admin / admin123456。后端为独立服务（Go · Gin），未启动时页面将通过演示数据运行。'
+  '默认账号：admin / admin123456。后端为独立服务（Go · Gin），未启动时无法登录。'
 )
 
 async function submit() {

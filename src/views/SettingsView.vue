@@ -5,7 +5,6 @@ import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as membersApi from '@/api/members'
 import * as settingsApi from '@/api/settings'
-import * as demo from '@/api/demo'
 import { useFetch } from '@/composables/useFetch'
 import { initials, formatDateTime } from '@/utils/format'
 import type { PaymentMethod } from '@/types'
@@ -13,8 +12,8 @@ import { PAYMENT_METHOD_TYPE, PAYMENT_METHOD_TYPE_LABEL } from '@/types'
 
 const tab = ref<'studio' | 'members' | 'roles' | 'payments' | 'logs'>('studio')
 
-const members = useFetch(() => membersApi.listUsers(), () => demo.demoUsersPage())
-const roles = useFetch(() => membersApi.listRoles(), () => demo.demoRoles)
+const members = useFetch(() => membersApi.listUsers())
+const roles = useFetch(() => membersApi.listRoles())
 
 /* ── 工作室信息（公司基础信息 + 预约主页 / 接单规则）── */
 const ws = useFetch(() => settingsApi.workspace())
@@ -201,7 +200,6 @@ const logs = useFetch(
       page: logFilter.page,
       page_size: logFilter.page_size
     }),
-  undefined,
   false
 )
 
@@ -230,16 +228,36 @@ const logPages = () => Math.max(1, Math.ceil(totalLogs() / logFilter.page_size))
 
 /* ── 成员 ─────────────────────────────────────── */
 const inviteOpen = ref(false)
+const inviteBusy = ref(false)
 const inviteForm = ref({ username: '', nickname: '', mobile: '', password: '', role_id: 3 })
 
 async function saveMember() {
-  if (!inviteForm.value.username.trim() || !inviteForm.value.nickname.trim() || !inviteForm.value.mobile.trim()) {
+  const f = inviteForm.value
+  if (!f.username.trim() || !f.nickname.trim() || !f.mobile.trim()) {
     toastErr('请填写用户名、姓名与手机号')
     return
   }
-  members.load()
-  inviteOpen.value = false
-  toastOk(`已邀请 ${inviteForm.value.nickname}（演示）`)
+  if (!f.password) {
+    toastErr('请设置初始密码')
+    return
+  }
+  inviteBusy.value = true
+  try {
+    await membersApi.createUser({ ...f })
+    toastOk(`已创建成员 ${f.nickname}`)
+    inviteOpen.value = false
+    inviteForm.value = { username: '', nickname: '', mobile: '', password: '', role_id: 3 }
+    members.load()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '创建失败')
+  } finally {
+    inviteBusy.value = false
+  }
+}
+
+/** 角色名映射：成员表按 role_id 展示可读名称 */
+function roleName(id: number) {
+  return roles.data?.find((r) => r.id === id)?.name || `角色 ${id}`
 }
 
 const statusTone: Record<number, string> = {
@@ -400,9 +418,10 @@ const statusTone: Record<number, string> = {
 
     <!-- 成员 -->
     <div v-if="tab === 'members'">
-      <div v-if="members.source === 'demo'" class="data-source-tip">
-        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" /></svg>
-        演示数据（后端未连接）。
+      <div v-if="members.error" class="data-source-tip">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5m0 3h.01" /></svg>
+        成员加载失败：{{ members.error }}
+        <button class="btn btn-sm btn-outline" style="margin-left: auto" @click="members.load()">重试</button>
       </div>
       <div class="card">
         <div class="table-wrap">
@@ -418,16 +437,14 @@ const statusTone: Record<number, string> = {
                     <span class="cell-main">{{ m.nickname || m.username }}</span>
                   </div>
                 </td>
-                <td><span class="tag">{{ m.role_id }}</span></td>
+                <td><span class="tag">{{ roleName(m.role_id) }}</span></td>
                 <td>{{ m.mobile }}</td>
                 <td>
                   <span class="pill" :class="statusTone[m.status]">
                     {{ m.status === 1 ? '正常' : '停用' }}
                   </span>
                 </td>
-                <td>
-                  <button class="btn btn-sm btn-outline" @click="toastOk('编辑成员（演示）')">编辑</button>
-                </td>
+                <td></td>
               </tr>
             </tbody>
           </table>
@@ -444,7 +461,6 @@ const statusTone: Record<number, string> = {
             <span class="tag" style="background: var(--lav); color: var(--lav-dark)">{{ r.remark }}</span>
           </div>
         </div>
-        <button class="btn btn-sm btn-outline" @click="toastOk('编辑角色（演示）')">编辑</button>
       </div>
     </div>
 
@@ -590,7 +606,9 @@ const statusTone: Record<number, string> = {
       </form>
       <template #foot>
         <button class="btn btn-ghost" @click="inviteOpen = false">取消</button>
-        <button class="btn btn-primary" type="submit" form="modal-form">保存</button>
+        <button class="btn btn-primary" type="submit" form="modal-form" :disabled="inviteBusy">
+          {{ inviteBusy ? '创建中…' : '保存' }}
+        </button>
       </template>
     </BaseModal>
 

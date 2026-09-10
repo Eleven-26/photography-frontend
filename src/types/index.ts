@@ -43,7 +43,9 @@ export {
   WEEKDAY_LABEL,
   SLOT_TEMPLATE_STATUS,
   PAYMENT_METHOD_TYPE,
-  PAYMENT_METHOD_TYPE_LABEL
+  PAYMENT_METHOD_TYPE_LABEL,
+  ORDER_SOURCE,
+  ORDER_SOURCE_LABEL
 } from '@/constants/enums'
 
 /** 统一响应体 — 与后端 response.Body 对齐 */
@@ -153,8 +155,30 @@ export interface Customer {
   status: number // 客户状态 1-潜在 2-活跃 3-流失
   remark: string
   avatar: string
+  /** 通知许可 0-不允许 1-允许 */
+  allow_notifications: number | null
+  /** 偏好风格（如 自然·生活感） */
+  prefer_style: string
+  /** 常用场景（如 户外公园） */
+  prefer_scene: string
   order_count: number
   total_amount: number
+  /** 满意度：该客户订单评价均分（保留 1 位小数，0=暂无评价），仅详情接口返回 */
+  satisfaction: number
+}
+
+// ──── 客户统计（crm_customer 聚合）───────────────
+export interface CustomerStats {
+  total: number
+  potential: number
+  active: number
+  inactive: number
+  gold_up: number
+  new_this_month: number
+  /** 复购客户数（下单 ≥ 2 次） */
+  repurchase_count: number
+  /** 复购率 %（分母为有过下单的客户） */
+  repurchase_rate: number
 }
 
 // ──── 线索（crm_lead）─────────────────────────────
@@ -254,7 +278,7 @@ export interface Order {
   total_amt: number
   paid_amt: number
   refund_amt: number
-  status: OrderStatus // 1-待定金 2-待拍摄 3-拍摄中 4-精修中 5-待交付 6-已完成 7-已取消
+  status: OrderStatus // 0-待确认 1-待定金 2-待拍摄 3-拍摄中 4-精修中 5-待交付 6-已完成 7-已取消
   payment_status: number // 1-待核验 2-已确认 3-待支付 4-已退款
   shoot_date?: string | null
   shoot_time: string
@@ -265,6 +289,8 @@ export interface Order {
   cancel_reason: string
   finished_at?: string | null
   owner_id: number
+  /** 订单来源 1-管理端录入 2-客户预约 3-线索报价转化（ORDER_SOURCE） */
+  source_type: number
 }
 
 // ──── 收款（biz_order_payment）────────────────────
@@ -545,6 +571,49 @@ export interface DashboardOverview {
   pending_deliveries: number
   new_leads: number
   overdue_leads: number
+  /** 待定金订单数 */
+  pending_deposit: number
+  /** 精修中订单数 */
+  pending_retouch: number
+  /** 未来待拍摄订单数 */
+  upcoming_shoots: number
+  /** 今日确认到账（同 today_amount） */
+  today_confirmed: number
+  /** 今日申报待核验金额 */
+  today_pending: number
+  /** 当前登录人未读通知数 */
+  unread_notify: number
+  /** 本月新增线索数（成交率分母） */
+  month_leads: number
+  /** 本月成交率 % = 本月新增订单 / 本月新增线索 */
+  month_deal_rate: number
+  /** 未来 7 天剩余可约时段数 */
+  available_slots: number
+  /** 今日拍摄列表 */
+  today_shoots: TodayShoot[]
+  /** 待办清单（后端已过滤 count=0 的条目） */
+  todo_items: TodoItem[]
+}
+
+/** 今日拍摄条目（工作台） */
+export interface TodayShoot {
+  id: number
+  code: string
+  customer_name: string
+  package_name: string
+  shoot_time: string
+  shoot_address: string
+  photographer: string
+  status: number
+}
+
+/** 工作台待办条目 */
+export interface TodoItem {
+  key: string
+  label: string
+  count: number
+  route: string
+  tone: 'danger' | 'warning' | 'normal'
 }
 
 // ──── 财务汇总 ────────────────────────────────────

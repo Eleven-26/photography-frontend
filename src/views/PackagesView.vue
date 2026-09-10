@@ -1,32 +1,92 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import AppToast from '@/components/AppToast.vue'
-import { toastOk } from '@/composables/useToast'
+import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
+import * as packageApi from '@/api/packages'
+import { useFetch } from '@/composables/useFetch'
+import type { Package } from '@/types'
+import { PACKAGE_STATUS, PACKAGE_STATUS_LABEL } from '@/types'
 
-interface Pkg {
-  id: number
-  name: string
-  type: string
-  price: number
-  deposit_ratio: number
-  shots: number
-  scenes: number
-  outfits: number
-  prints: string
-  status: 'active' | 'paused'
-}
+const query = reactive({ page: 1, page_size: 60 })
 
-const pkgs = ref<Pkg[]>([
-  { id: 1, name: '家庭纪念写真', type: '家庭写真', price: 2680, deposit_ratio: 20, shots: 30, scenes: 2, outfits: 2, prints: '6×6 相册 + 8 寸相框', status: 'active' },
-  { id: 2, name: '商务形象照', type: '商务肖像', price: 1800, deposit_ratio: 20, shots: 12, scenes: 1, outfits: 2, prints: '精修 6 张 + 电子版', status: 'active' },
-  { id: 3, name: '婚礼跟拍', type: '婚礼跟拍', price: 4800, deposit_ratio: 30, shots: 400, scenes: 2, outfits: 0, prints: '精修 80 张 + 相册', status: 'active' },
-  { id: 4, name: '亲子写真', type: '家庭写真', price: 1680, deposit_ratio: 20, shots: 20, scenes: 1, outfits: 2, prints: '精修 12 张', status: 'active' },
-  { id: 5, name: '自然人像', type: '自然人像', price: 1680, deposit_ratio: 20, shots: 25, scenes: 1, outfits: 1, prints: '精修 10 张', status: 'active' },
-  { id: 6, name: '证件照', type: '证件照', price: 480, deposit_ratio: 100, shots: 4, scenes: 1, outfits: 0, prints: '1 版', status: 'active' }
-])
+// 套餐列表：走真实接口，失败即提示（不再内联演示数据）
+const page = useFetch(() => packageApi.listPackages(query as Record<string, unknown>))
+const pkgs = computed(() => page.data?.list || [])
 
 const addOpen = ref(false)
+const saving = ref(false)
+const form = reactive({
+  name: '',
+  category: '',
+  base_price: 0,
+  deposit_rate: 0,
+  photos_included: 0,
+  shoot_hours: 0,
+  content_desc: '',
+  addon_unit_price: 0
+})
+
+/** 定金比例表单以「百分数」呈现，后端存的是小数（0.3 = 30%） */
+const depositPercent = computed({
+  get: () => Math.round((form.deposit_rate || 0) * 100),
+  set: (v: number) => {
+    form.deposit_rate = (Number(v) || 0) / 100
+  }
+})
+
+function resetForm() {
+  Object.assign(form, {
+    name: '',
+    category: '',
+    base_price: 0,
+    deposit_rate: 0,
+    photos_included: 0,
+    shoot_hours: 0,
+    content_desc: '',
+    addon_unit_price: 0
+  })
+}
+
+async function savePackage() {
+  if (!form.name.trim()) {
+    toastErr('请输入套餐名称')
+    return
+  }
+  if (form.base_price <= 0) {
+    toastErr('请输入有效的套餐价格')
+    return
+  }
+  saving.value = true
+  try {
+    await packageApi.createPackage({ ...form, status: PACKAGE_STATUS.DRAFT })
+    toastOk('套餐已创建（草稿，可在卡片上上架）')
+    addOpen.value = false
+    resetForm()
+    page.load()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '创建失败')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function toggleStatus(p: Package) {
+  const next = p.status === PACKAGE_STATUS.ACTIVE ? PACKAGE_STATUS.OFFLINE : PACKAGE_STATUS.ACTIVE
+  try {
+    await packageApi.setPackageStatus(p.id, next)
+    toastOk(next === PACKAGE_STATUS.ACTIVE ? '套餐已上架' : '套餐已下线')
+    page.load()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '操作失败')
+  }
+}
+
+const statusTone: Record<number, string> = {
+  [PACKAGE_STATUS.DRAFT]: 'status-disabled',
+  [PACKAGE_STATUS.ACTIVE]: 'status-ok',
+  [PACKAGE_STATUS.OFFLINE]: 'status-muted'
+}
 </script>
 
 <template>
@@ -38,69 +98,92 @@ const addOpen = ref(false)
         <p>定价、定金比例与交付标准的统一配置。</p>
       </div>
       <div class="page-actions">
+        <button class="btn btn-outline" @click="page.load">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
+          刷新
+        </button>
         <button class="btn btn-primary" @click="addOpen = true">+ 新建套餐</button>
       </div>
     </div>
 
-    <div class="data-source-tip">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" /></svg>
-      演示数据（后端未连接）— 套餐模块支持 API 接口。
+    <div v-if="page.error" class="data-source-tip">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5m0 3h.01" /></svg>
+      套餐数据加载失败：{{ page.error }}
+      <button class="btn btn-sm btn-outline" style="margin-left: auto" @click="page.load">重试</button>
     </div>
 
     <div class="grid cols-3 g-16" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
       <div v-for="p in pkgs" :key="p.id" class="card card-pad pkg">
         <div class="flex between">
-          <span class="tag">{{ p.type }}</span>
-          <span class="pill" :class="p.status === 'active' ? 'status-ok' : 'status-disabled'">
-            {{ p.status === 'active' ? '在售' : '停售' }}
+          <span class="tag">{{ p.category || '未分类' }}</span>
+          <span class="pill" :class="statusTone[p.status] || 'status-disabled'">
+            {{ PACKAGE_STATUS_LABEL[p.status] || p.status }}
           </span>
         </div>
         <h3 class="serif" style="margin: 13px 0 4px; font-size: 18px">{{ p.name }}</h3>
         <div class="pkg-price">
-          <b>¥{{ p.price.toLocaleString() }}</b>
-          <span class="muted xsmall">定金 {{ p.deposit_ratio }}%</span>
+          <b>¥{{ p.base_price.toLocaleString() }}</b>
+          <span class="muted xsmall">定金 {{ Math.round((p.deposit_rate || 0) * 100) }}%</span>
         </div>
         <div class="pkg-meta">
-          <span>精修 {{ p.shots }} 张</span>
-          <span>{{ p.scenes }} 组场景</span>
-          <span>{{ p.outfits }} 套造型</span>
+          <span>精修 {{ p.photos_included }} 张</span>
+          <span>{{ p.shoot_hours }} 小时</span>
+          <span>加片 ¥{{ p.addon_unit_price }}/张</span>
         </div>
         <div class="divider"></div>
         <div class="flex between">
-          <span class="muted small">交付：{{ p.prints }}</span>
-          <button class="btn btn-sm btn-outline" @click="toastOk('编辑功能（演示）')">编辑</button>
+          <span class="muted small">{{ p.content_desc || '暂无交付说明' }}</span>
+          <button class="btn btn-sm btn-outline" @click="toggleStatus(p)">
+            {{ p.status === PACKAGE_STATUS.ACTIVE ? '下线' : '上架' }}
+          </button>
         </div>
       </div>
     </div>
+    <div v-if="!pkgs.length && !page.loading" class="empty-state">
+      <strong>暂无套餐</strong>
+      <p>点击右上角「新建套餐」创建第一个套餐。</p>
+    </div>
 
     <BaseModal :open="addOpen" title="新建套餐" @close="addOpen = false">
-      <form id="modal-form" class="form-grid form-grid-2" @submit.prevent="toastOk('套餐已创建（演示）'); addOpen = false">
+      <form id="modal-form" class="form-grid form-grid-2" @submit.prevent="savePackage">
         <div class="field">
           <label class="field-label"><span class="req">*</span> 套餐名称</label>
-          <input class="input" placeholder="如 婚礼跟拍" />
+          <input v-model="form.name" class="input" placeholder="如 婚礼跟拍" />
         </div>
         <div class="field">
-          <label class="field-label">类型</label>
-          <select class="select">
-            <option value="家庭写真">家庭写真</option>
-            <option value="商务肖像">商务肖像</option>
-            <option value="婚礼跟拍">婚礼跟拍</option>
-            <option value="自然人像">自然人像</option>
-            <option value="证件照">证件照</option>
-          </select>
+          <label class="field-label">分类</label>
+          <input v-model="form.category" class="input" placeholder="如 家庭写真" />
         </div>
         <div class="field">
           <label class="field-label"><span class="req">*</span> 价格（元）</label>
-          <input class="input" type="number" min="0" />
+          <input v-model.number="form.base_price" class="input" type="number" min="0" />
         </div>
         <div class="field">
           <label class="field-label">定金比例（%）</label>
-          <input class="input" type="number" min="0" max="100" />
+          <input v-model.number="depositPercent" class="input" type="number" min="0" max="100" />
+        </div>
+        <div class="field">
+          <label class="field-label">包含精修（张）</label>
+          <input v-model.number="form.photos_included" class="input" type="number" min="0" />
+        </div>
+        <div class="field">
+          <label class="field-label">拍摄时长（小时）</label>
+          <input v-model.number="form.shoot_hours" class="input" type="number" min="0" step="0.5" />
+        </div>
+        <div class="field">
+          <label class="field-label">加片单价（元/张）</label>
+          <input v-model.number="form.addon_unit_price" class="input" type="number" min="0" />
+        </div>
+        <div class="field" style="grid-column: 1 / -1">
+          <label class="field-label">交付说明</label>
+          <textarea v-model="form.content_desc" class="textarea" rows="2" placeholder="如 精修 80 张 + 相册"></textarea>
         </div>
       </form>
       <template #foot>
         <button class="btn btn-ghost" @click="addOpen = false">取消</button>
-        <button class="btn btn-primary" type="submit" form="modal-form">保存</button>
+        <button class="btn btn-primary" type="submit" form="modal-form" :disabled="saving">
+          {{ saving ? '保存中…' : '保存' }}
+        </button>
       </template>
     </BaseModal>
   </div>

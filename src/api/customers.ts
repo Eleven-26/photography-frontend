@@ -1,5 +1,5 @@
 import { rpc } from './common/http'
-import type { Customer, PageResult } from '@/types'
+import type { Customer, CustomerStats, PageResult } from '@/types'
 import { API_PATHS } from './common/apiPath'
 
 export interface CustomerListParams {
@@ -28,5 +28,5 @@ export function updateCustomer(id: number, data: Partial<Customer>) {
 }
 
 export function customerStats() {
-  return rpc<{ total: number; potential: number; active: number; inactive: number }>(API_PATHS.customer.stats)
+  return rpc<CustomerStats>(API_PATHS.customer.stats)
 }

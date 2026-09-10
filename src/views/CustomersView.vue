@@ -42,13 +42,23 @@ const editForm = reactive({
   source: '',
   tags: '',
   status: CUSTOMER_STATUS.ACTIVE as Customer['status'],
-  remark: ''
+  remark: '',
+  // 通知许可 0-不允许 1-允许：后端用指针语义接收，显式 0 才能真正关闭
+  allow_notifications: 1,
+  prefer_style: '',
+  prefer_scene: ''
 })
 
-function openDetail(c: Customer) {
+async function openDetail(c: Customer) {
   detail.value = c
   editing.value = false
   detailOpen.value = true
+  // 详情接口额外返回满意度等派生字段（列表接口不返回），打开后再覆盖一次
+  try {
+    detail.value = await customersApi.customerDetail(c.id)
+  } catch {
+    // 详情拉取失败时保留列表数据，不阻断档案查看
+  }
 }
 
 function enterEdit() {
@@ -63,6 +73,9 @@ function enterEdit() {
   editForm.tags = c.tags
   editForm.status = c.status
   editForm.remark = c.remark
+  editForm.allow_notifications = c.allow_notifications ?? 1
+  editForm.prefer_style = c.prefer_style || ''
+  editForm.prefer_scene = c.prefer_scene || ''
   editing.value = true
 }
 
@@ -141,7 +154,7 @@ async function saveCustomer() {
       <button class="btn btn-sm btn-outline" style="margin-left: auto" @click="page.load(); stats.load()">重试</button>
     </div>
 
-    <div class="stats-grid stats-4">
+    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr))">
       <div class="stat-card">
         <div class="stat-head"><span class="stat-icon tone-orange"><svg class="icon" viewBox="0 0 24 24"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 9a6 6 0 0 0-12 0" /></svg></span>客户总数</div>
         <div class="stat-value">{{ stats.data?.total || 0 }}</div>
@@ -157,6 +170,16 @@ async function saveCustomer() {
       <div class="stat-card">
         <div class="stat-head"><span class="stat-icon tone-yellow"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2v20m-7-7 7 7 7-7" /></svg></span>非活跃</div>
         <div class="stat-value">{{ stats.data?.inactive || 0 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-head"><span class="stat-icon tone-mint"><svg class="icon" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 13.7-5.7L20 8m0-5v5h-5" /></svg></span>复购客户</div>
+        <div class="stat-value">{{ stats.data?.repurchase_count || 0 }}</div>
+        <div class="stat-sub">复购率 {{ (stats.data?.repurchase_rate || 0).toFixed(1) }}%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-head"><span class="stat-icon tone-lav"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18" /></svg></span>黄金及以上</div>
+        <div class="stat-value">{{ stats.data?.gold_up || 0 }}</div>
+        <div class="stat-sub">本月新增 {{ stats.data?.new_this_month || 0 }}</div>
       </div>
     </div>
 
@@ -243,6 +266,15 @@ async function saveCustomer() {
             <div class="field"><span class="field-label">标签</span><span>{{ detail.tags || '—' }}</span></div>
             <div class="field"><span class="field-label">订单数</span><span>{{ detail.order_count }}</span></div>
             <div class="field"><span class="field-label">累计消费</span><span class="strong">{{ money(detail.total_amount) }}</span></div>
+            <div class="field"><span class="field-label">满意度</span><span class="strong">{{ detail.satisfaction ? detail.satisfaction.toFixed(1) : '暂无评价' }}</span></div>
+            <div class="field"><span class="field-label">复购</span><span>{{ detail.order_count >= 2 ? '复购客户' : '首次消费' }}</span></div>
+          </div>
+          <div class="divider"></div>
+          <div class="section-title" style="margin-top: 0"><h2>客户偏好</h2></div>
+          <div class="detail-grid">
+            <div class="field"><span class="field-label">通知许可</span><span>{{ (detail.allow_notifications ?? 1) === 1 ? '允许' : '不允许' }}</span></div>
+            <div class="field"><span class="field-label">偏好风格</span><span>{{ detail.prefer_style || '—' }}</span></div>
+            <div class="field"><span class="field-label">常用场景</span><span>{{ detail.prefer_scene || '—' }}</span></div>
           </div>
           <div class="divider"></div>
           <div class="section-title" style="margin-top: 0"><h2>备注</h2></div>
@@ -297,6 +329,21 @@ async function saveCustomer() {
             <div class="field">
               <label class="field-label">标签</label>
               <input v-model="editForm.tags" class="input" placeholder="逗号分隔" />
+            </div>
+            <div class="field">
+              <label class="field-label">通知许可</label>
+              <select v-model.number="editForm.allow_notifications" class="select">
+                <option :value="1">允许</option>
+                <option :value="0">不允许</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">偏好风格</label>
+              <input v-model="editForm.prefer_style" class="input" placeholder="如 自然·生活感" />
+            </div>
+            <div class="field">
+              <label class="field-label">常用场景</label>
+              <input v-model="editForm.prefer_scene" class="input" placeholder="如 户外公园" />
             </div>
             <div class="field" style="grid-column: 1 / -1">
               <label class="field-label">备注</label>

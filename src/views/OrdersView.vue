@@ -13,6 +13,7 @@ import { money, formatDate, formatDateTime, initials, orderTone } from '@/utils/
 import {
   ORDER_STATUS,
   ORDER_STATUS_LABEL,
+  ORDER_SOURCE_LABEL,
   PAYMENT_STATUS,
   PAYMENT_STATUS_LABEL,
   PACKAGE_STATUS,
@@ -127,6 +128,21 @@ const detailTabs = computed(
       { key: 'logs', label: '动态', count: detailLogs.value.length }
     ] as { key: DetailTab; label: string; count?: number }[]
 )
+
+// 收款双口径：申报金额 vs 已确认到账。
+// 待核验的申报**不计入已收**，但已包含在订单应收内（原型财务口径）。
+const paymentSummary = computed(() => {
+  let declared = 0
+  let confirmed = 0
+  let pending = 0
+  for (const p of detailPayments.value) {
+    const amt = p.amount || 0
+    declared += amt
+    if (p.status === PAYMENT_STATUS.CONFIRMED) confirmed += amt
+    else if (p.status === PAYMENT_STATUS.PENDING) pending += amt
+  }
+  return { declared, confirmed, pending }
+})
 
 async function openDetail(orderId: number) {
   detailOpen.value = true
@@ -665,6 +681,8 @@ async function saveOrder() {
               <div class="field"><span class="field-label">拍摄日期</span><span>{{ formatDate(detail.shoot_date) }} {{ detail.shoot_time }}</span></div>
               <div class="field"><span class="field-label">拍摄地点</span><span>{{ detail.shoot_address || '—' }}</span></div>
               <div class="field"><span class="field-label">主拍摄影师</span><span>{{ detail.photographer || '未分配' }}</span></div>
+              <div class="field"><span class="field-label">订单来源</span><span>{{ ORDER_SOURCE_LABEL[detail.source_type] || '—' }}</span></div>
+              <div class="field"><span class="field-label">套餐版本</span><span>v{{ detail.package_version }}</span></div>
               <div class="field"><span class="field-label">套餐基础价</span><span>{{ money(detail.base_price) }}</span></div>
               <div class="field"><span class="field-label">加项合计</span><span>{{ money(detail.addon_amount) }}</span></div>
               <div class="field"><span class="field-label">定金</span><span>{{ money(detail.deposit_amt) }}</span></div>
@@ -681,6 +699,11 @@ async function saveOrder() {
           <!-- 收款 / 退款 -->
           <div v-show="detailTab === 'payments'">
             <div class="section-title" style="margin-top: 0"><h2>收款记录</h2><span>{{ detailPayments.length }} 笔</span></div>
+            <div class="pay-summary">
+              <div><span class="muted xsmall">申报合计</span><b>{{ money(paymentSummary.declared) }}</b></div>
+              <div><span class="muted xsmall">已确认到账</span><b class="ok">{{ money(paymentSummary.confirmed) }}</b></div>
+              <div><span class="muted xsmall">待核验申报</span><b class="warn">{{ money(paymentSummary.pending) }}</b></div>
+            </div>
             <div v-if="detailPayments.length" class="pay-list">
               <div v-for="p in detailPayments" :key="p.id" class="pay-row">
                 <span class="pill" :class="payTone[p.status] || 'status-disabled'">{{ PAYMENT_STATUS_LABEL[p.status] || p.status }}</span>
@@ -1017,6 +1040,36 @@ async function saveOrder() {
   flex-direction: column;
   gap: 8px;
   padding: 4px 0 2px;
+}
+
+.pay-summary {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  background: #fbfaf6;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.pay-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pay-summary b {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+}
+
+.pay-summary b.ok {
+  color: var(--green-dark, #2f7d5a);
+}
+
+.pay-summary b.warn {
+  color: var(--orange-dark);
 }
 
 .pay-row {

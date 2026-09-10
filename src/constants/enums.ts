@@ -25,6 +25,19 @@ export const ORDER_STATUS_LABEL: Record<number, string> = {
   [ORDER_STATUS.CANCELLED]: '已取消'
 }
 
+/** 订单来源（biz_order.source_type） */
+export const ORDER_SOURCE = {
+  ADMIN: 1, // 管理端录入
+  CLIENT: 2, // 客户预约
+  LEAD_QUOTE: 3 // 线索报价转化
+} as const
+
+export const ORDER_SOURCE_LABEL: Record<number, string> = {
+  [ORDER_SOURCE.ADMIN]: '管理端录入',
+  [ORDER_SOURCE.CLIENT]: '客户预约',
+  [ORDER_SOURCE.LEAD_QUOTE]: '线索报价转化'
+}
+
 /** 支付状态（enum.PaymentStatus，订单 payment_status 与收款单 status 共用） */
 export const PAYMENT_STATUS = {
   PENDING: 1, // 待核验
