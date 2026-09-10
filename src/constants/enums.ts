@@ -158,6 +158,47 @@ export const ASSET_STATUS_LABEL: Record<number, string> = {
   [ASSET_STATUS.PUBLISHED]: '已发布'
 }
 
+/** 作品可见性（enum.AssetVisibility） */
+export const ASSET_VISIBILITY = {
+  PUBLIC: 1, // 公开（客户 H5 可见）
+  PRIVATE: 2 // 未公开（仅工作室内部可见）
+} as const
+
+export const ASSET_VISIBILITY_LABEL: Record<number, string> = {
+  [ASSET_VISIBILITY.PUBLIC]: '公开',
+  [ASSET_VISIBILITY.PRIVATE]: '未公开'
+}
+
+/** 客户授权状态（enum.AssetAuthorization） */
+export const ASSET_AUTH = {
+  PENDING: 1, // 待授权
+  GRANTED: 2 // 已授权
+} as const
+
+export const ASSET_AUTH_LABEL: Record<number, string> = {
+  [ASSET_AUTH.PENDING]: '待授权',
+  [ASSET_AUTH.GRANTED]: '已授权'
+}
+
+/** 线索需求摘要项状态（enum.BriefItemStatus） */
+export const BRIEF_ITEM_STATUS = {
+  PENDING: 1, // 待追问
+  SENT: 2, // 已发送
+  CONFIRMED: 3 // 已确认
+} as const
+
+export const BRIEF_ITEM_STATUS_LABEL: Record<number, string> = {
+  [BRIEF_ITEM_STATUS.PENDING]: '待追问',
+  [BRIEF_ITEM_STATUS.SENT]: '已发送',
+  [BRIEF_ITEM_STATUS.CONFIRMED]: '已确认'
+}
+
+/** 线索沟通方向（biz_lead_message.direction） */
+export const LEAD_MESSAGE_DIRECTION = {
+  INBOUND: 1, // 客户发来
+  OUTBOUND: 2 // 工作室发出
+} as const
+
 /** 档期锁定状态（enum.BlockStatus） */
 export const BLOCK_STATUS = {
   LOCKED: 1, // 已锁定

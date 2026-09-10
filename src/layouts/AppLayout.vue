@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
-import { initials } from '@/utils/format'
+import { initials, relativeTime } from '@/utils/format'
+import * as notifApi from '@/api/notifications'
+import type { Notification } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
@@ -16,6 +18,82 @@ const userName = computed(() => auth.user?.nickname || auth.user?.username || '�
 const userRole = computed(() => auth.user?.role_name || '主理人')
 
 const query = ref('')
+
+/* ── 通知中心 ─────────────────────────────────── */
+const notifOpen = ref(false)
+const unread = ref(0)
+const notifList = ref<Notification[]>([])
+const notifLoading = ref(false)
+const notifError = ref('')
+let timer: ReturnType<typeof setInterval> | null = null
+
+async function loadUnread() {
+  try {
+    const res = await notifApi.unreadCount()
+    unread.value = res?.unread ?? 0
+  } catch {
+    /* 未读数失败不打扰用户，静默保持旧值 */
+  }
+}
+
+async function loadNotifications() {
+  notifLoading.value = true
+  notifError.value = ''
+  try {
+    const res = await notifApi.listNotifications({ page: 1, page_size: 20 })
+    notifList.value = res?.list || []
+  } catch (e) {
+    notifList.value = []
+    notifError.value = e instanceof Error ? e.message : '通知加载失败'
+  } finally {
+    notifLoading.value = false
+  }
+}
+
+function toggleNotifications() {
+  notifOpen.value = !notifOpen.value
+  if (notifOpen.value) void loadNotifications()
+}
+
+/** 通知点击跳转：按业务类型落到对应模块 */
+function notifTarget(n: Notification) {
+  if (n.biz_type === 'refund' || n.type === 'finance') return '/finance'
+  if (n.biz_type === 'order' || n.type === 'order') return '/orders'
+  return '/dashboard'
+}
+
+async function openNotification(n: Notification) {
+  if (n.is_read !== 1) {
+    try {
+      await notifApi.markNotificationRead(n.id)
+      n.is_read = 1
+      unread.value = Math.max(0, unread.value - 1)
+    } catch {
+      /* 忽略：跳转优先 */
+    }
+  }
+  notifOpen.value = false
+  router.push(notifTarget(n))
+}
+
+async function readAll() {
+  try {
+    await notifApi.markAllNotificationsRead()
+    notifList.value = notifList.value.map((n) => ({ ...n, is_read: 1 }))
+    unread.value = 0
+  } catch {
+    /* 忽略 */
+  }
+}
+
+onMounted(() => {
+  void loadUnread()
+  timer = setInterval(loadUnread, 60000)
+})
+
+onBeforeUnmount(() => {
+  if (timer) clearInterval(timer)
+})
 
 const navGroups = [  {
     label: '工作台',
@@ -152,11 +230,43 @@ function logout() {
         </div>
 
         <div class="top-actions">
-          <button class="top-action" title="提醒">
-            <svg class="icon" viewBox="0 0 24 24">
-              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M9.5 20a2.5 2.5 0 0 0 5 0" />
-            </svg>
-          </button>
+          <div class="notif-wrap">
+            <button class="top-action" title="通知" @click="toggleNotifications">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M9.5 20a2.5 2.5 0 0 0 5 0" />
+              </svg>
+              <span v-if="unread > 0" class="notif-badge">{{ unread > 99 ? '99+' : unread }}</span>
+            </button>
+
+            <div v-if="notifOpen" class="notif-backdrop" @click="notifOpen = false"></div>
+            <div v-if="notifOpen" class="notif-panel">
+              <div class="notif-head">
+                <strong>通知</strong>
+                <span class="muted xsmall">{{ unread }} 条未读</span>
+                <button class="btn btn-sm btn-ghost" style="margin-left: auto" @click="readAll">全部已读</button>
+              </div>
+              <div class="notif-list">
+                <button
+                  v-for="n in notifList"
+                  :key="n.id"
+                  class="notif-item"
+                  :class="{ unread: n.is_read !== 1 }"
+                  @click="openNotification(n)"
+                >
+                  <i class="notif-dot"></i>
+                  <div class="notif-copy">
+                    <div class="notif-title">{{ n.title }}</div>
+                    <div class="notif-content">{{ n.content }}</div>
+                    <div class="notif-time">{{ relativeTime(n.created_at) }}</div>
+                  </div>
+                </button>
+                <div v-if="notifLoading" class="notif-empty">加载中…</div>
+                <div v-else-if="notifError" class="notif-empty">{{ notifError }}</div>
+                <div v-else-if="!notifList.length" class="notif-empty">暂无通知</div>
+              </div>
+            </div>
+          </div>
+
           <button class="top-action" title="帮助">
             <svg class="icon" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .6-1 1.7m0 3h.01" />
@@ -188,5 +298,121 @@ function logout() {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.notif-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--red, #d64545);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+
+.notif-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 330px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md, 0 12px 30px rgba(0, 0, 0, 0.12));
+  z-index: 41;
+  overflow: hidden;
+}
+
+.notif-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.notif-list {
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.notif-item {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.notif-item:hover {
+  background: var(--cream, #faf7f2);
+}
+
+.notif-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.notif-item.unread .notif-dot {
+  background: var(--orange);
+}
+
+.notif-copy {
+  min-width: 0;
+}
+
+.notif-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink, #222);
+}
+
+.notif-content {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+  word-break: break-all;
+}
+
+.notif-time {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.notif-empty {
+  padding: 26px 10px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
 }
 </style>

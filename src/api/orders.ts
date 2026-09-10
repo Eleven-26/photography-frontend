@@ -26,6 +26,8 @@ export function orderLogs(id: number) {
 export function createOrder(data: {
   customer_id: number
   package_id: number
+  lead_id?: number
+  quote_id?: number
   shoot_date?: string
   shoot_time?: string
   shoot_address?: string
@@ -37,7 +39,7 @@ export function createOrder(data: {
 }
 
 export function updateOrder(id: number, data: Partial<Order>) {
-  return rpc<Order>(API_PATHS.order.update, data, id)
+  return rpc<null>(API_PATHS.order.update, data, id)
 }
 
 export function updateOrderStatus(id: number, status: number) {

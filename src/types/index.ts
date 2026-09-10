@@ -26,6 +26,13 @@ export {
   DELIVERY_STAGE_LABEL,
   ASSET_STATUS,
   ASSET_STATUS_LABEL,
+  ASSET_VISIBILITY,
+  ASSET_VISIBILITY_LABEL,
+  ASSET_AUTH,
+  ASSET_AUTH_LABEL,
+  BRIEF_ITEM_STATUS,
+  BRIEF_ITEM_STATUS_LABEL,
+  LEAD_MESSAGE_DIRECTION,
   BLOCK_STATUS,
   BLOCK_STATUS_LABEL,
   NOTIFICATION_READ,
@@ -180,6 +187,15 @@ export interface Quote {
   remark: string
   owner_id: number
   shoot_date?: string | null
+  shoot_time: string
+  valid_until?: string | null
+  duration_hours: number
+  location: string
+  people_count: string
+  addons: string
+  accept_at?: string | null
+  order_id: number
+  created_at?: string
 }
 
 // ──── 套餐（biz_package）────────────────────────
@@ -411,11 +427,71 @@ export interface Asset {
   company_id: number
   code: string
   title: string
-  cover: string
   category: string
-  content: string
-  status: number // 作品状态 1-草稿 2-已发布
+  cover: string
+  /** 作品图片，逗号分隔的 URL 串（不是数组） */
+  images: string
+  description: string
+  photographer: string
+  model: string
+  location: string
+  /** 拍摄日期 yyyy-MM-dd */
+  shoot_date?: string | null
+  /** 关联套餐ID，逗号分隔 */
+  package_ids: string
+  status: number // 作品状态 1-草稿 2-已发布（ASSET_STATUS）
+  visibility: number // 可见性 1-公开 2-未公开（ASSET_VISIBILITY）
+  featured: number // 精选展示（主页顶部）0-否 1-是
+  authorization: number // 客户授权 1-待授权 2-已授权
+  view_count: number
   published_at?: string | null
+}
+
+// ──── 线索沟通记录（biz_lead_message）─────────────
+export interface LeadMessage {
+  id: number
+  company_id: number
+  lead_id: number
+  customer_id: number
+  direction: number // 方向 1-客户发来 2-工作室发出
+  channel: string // h5/wechat/sms/phone
+  content: string
+  msg_type: number // 1-文本 2-追问 3-报价通知 4-作品分享
+  biz_id: number
+  created_at?: string
+}
+
+// ──── 线索需求摘要项（biz_lead_brief_item）────────
+export interface LeadBriefItem {
+  id: number
+  company_id: number
+  lead_id: number
+  title: string
+  value: string // 已确认项的值
+  question: string // 待追问项的问题
+  ai_suggestion: string // AI 建议话术
+  status: number // 1-待追问 2-已发送 3-已确认（BRIEF_ITEM_STATUS）
+  affects_pricing: number // 0-否 1-是
+  sort: number
+  sent_at?: string | null
+  confirmed_at?: string | null
+}
+
+// ──── 操作日志（sys_operation_log）───────────────
+export interface OperationLog {
+  id: number
+  company_id: number
+  user_id: number
+  username: string
+  module: string
+  action: string
+  method: string
+  path: string
+  params: string
+  ip: string
+  status: number // 1-成功 0-失败
+  duration: number // 毫秒
+  created_at?: string
 }
 
 // ──── 通知（sys_notification）────────────────────
@@ -430,6 +506,7 @@ export interface Notification {
   biz_id: number
   is_read: number
   read_at?: string | null
+  created_at?: string
 }
 
 // ──── 工作台汇总 ─────────────────────────────────

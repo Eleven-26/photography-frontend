@@ -1,17 +1,63 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as membersApi from '@/api/members'
+import * as settingsApi from '@/api/settings'
 import * as demo from '@/api/demo'
 import { useFetch } from '@/composables/useFetch'
-import { initials } from '@/utils/format'
+import { initials, formatDateTime } from '@/utils/format'
 
-const tab = ref<'studio' | 'members' | 'roles'>('members')
+const tab = ref<'studio' | 'members' | 'roles' | 'logs'>('members')
 
 const members = useFetch(() => membersApi.listUsers(), () => demo.demoUsersPage())
 const roles = useFetch(() => membersApi.listRoles(), () => demo.demoRoles)
+
+/* ── 操作日志 ─────────────────────────────────── */
+const logFilter = reactive({
+  keyword: '',
+  module: '',
+  status: '' as number | '',
+  page: 1,
+  page_size: 20
+})
+
+const logs = useFetch(
+  () =>
+    settingsApi.listOperationLogs({
+      keyword: logFilter.keyword,
+      module: logFilter.module,
+      status: logFilter.status,
+      page: logFilter.page,
+      page_size: logFilter.page_size
+    }),
+  undefined,
+  false
+)
+
+const logModules = ['order', 'customer', 'lead', 'package', 'asset', 'finance', 'settings', 'auth']
+
+watch(
+  () => logFilter.page,
+  () => logs.load()
+)
+
+watch(tab, (t) => {
+  if (t === 'logs') logs.load()
+})
+
+function searchLogs() {
+  logFilter.page = 1
+  logs.load()
+}
+
+function logTone(status: number) {
+  return status === 1 ? 'status-ok' : 'status-error'
+}
+
+const totalLogs = () => logs.data?.total || 0
+const logPages = () => Math.max(1, Math.ceil(totalLogs() / logFilter.page_size))
 
 const studio = ref({
   name: 'Audi Shiraz · 摄影工作室',
@@ -59,7 +105,8 @@ const statusTone: Record<number, string> = {
       </div>
       <div class="page-actions">
         <button v-if="tab === 'members'" class="btn btn-primary" @click="inviteOpen = true">+ 邀请成员</button>
-        <button v-else class="btn btn-primary" @click="saveStudio">保存设置</button>
+        <button v-else-if="tab === 'studio'" class="btn btn-primary" @click="saveStudio">保存设置</button>
+        <button v-else-if="tab === 'logs'" class="btn btn-outline" @click="logs.load()">刷新</button>
       </div>
     </div>
 
@@ -67,6 +114,7 @@ const statusTone: Record<number, string> = {
       <button class="tab" :class="{ active: tab === 'members' }" @click="tab = 'members'">成员与权限</button>
       <button class="tab" :class="{ active: tab === 'roles' }" @click="tab = 'roles'">角色</button>
       <button class="tab" :class="{ active: tab === 'studio' }" @click="tab = 'studio'">工作室信息</button>
+      <button class="tab" :class="{ active: tab === 'logs' }" @click="tab = 'logs'">操作日志</button>
     </div>
 
     <!-- 成员 -->
@@ -172,6 +220,80 @@ const statusTone: Record<number, string> = {
       </div>
     </div>
 
+    <!-- 操作日志 -->
+    <div v-if="tab === 'logs'">
+      <div v-if="logs.error" class="data-source-tip error">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5m0 3h.01" /></svg>
+        日志加载失败：{{ logs.error }}
+        <button class="btn btn-sm btn-outline" style="margin-left: auto" @click="logs.load()">重试</button>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-input">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+          <input v-model="logFilter.keyword" class="input" placeholder="搜索操作人 / 行为 / 路径" @keyup.enter="searchLogs" />
+        </div>
+        <select v-model="logFilter.module" class="select" @change="searchLogs">
+          <option value="">全部模块</option>
+          <option v-for="m in logModules" :key="m" :value="m">{{ m }}</option>
+        </select>
+        <select v-model="logFilter.status" class="select" @change="searchLogs">
+          <option value="">全部结果</option>
+          <option :value="1">成功</option>
+          <option :value="0">失败</option>
+        </select>
+        <button class="btn btn-outline" @click="searchLogs">查询</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>操作人</th>
+                <th>模块</th>
+                <th>操作行为</th>
+                <th>请求</th>
+                <th>IP</th>
+                <th>结果</th>
+                <th>耗时</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="l in logs.data?.list || []" :key="l.id">
+                <td class="log-time">{{ formatDateTime(l.created_at) }}</td>
+                <td>{{ l.username || `#${l.user_id}` }}</td>
+                <td><span class="tag">{{ l.module || '—' }}</span></td>
+                <td class="cell-main">{{ l.action || '—' }}</td>
+                <td class="log-path">
+                  <span class="tag">{{ l.method }}</span>
+                  <span>{{ l.path }}</span>
+                </td>
+                <td class="log-ip">{{ l.ip || '—' }}</td>
+                <td>
+                  <span class="pill" :class="logTone(l.status)">{{ l.status === 1 ? '成功' : '失败' }}</span>
+                </td>
+                <td>{{ l.duration }} ms</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-if="!logs.loading && !(logs.data?.list || []).length" class="empty-state">
+          <strong>{{ logs.error ? '加载失败' : '暂无操作日志' }}</strong>
+          <p>{{ logs.error ? logs.error : '系统会记录关键写操作，便于追溯。' }}</p>
+        </div>
+      </div>
+
+      <div class="pager">
+        <span class="muted xsmall">共 {{ totalLogs() }} 条 · 第 {{ logFilter.page }} / {{ logPages() }} 页</span>
+        <div class="pager-pages">
+          <button class="btn btn-sm btn-outline" :disabled="logFilter.page <= 1" @click="logFilter.page--">上一页</button>
+          <button class="btn btn-sm btn-outline" :disabled="logFilter.page >= logPages()" @click="logFilter.page++">下一页</button>
+        </div>
+      </div>
+    </div>
+
     <BaseModal :open="inviteOpen" title="邀请成员" @close="inviteOpen = false">
       <form id="modal-form" class="form-grid" @submit.prevent="saveMember">
         <div class="field">
@@ -204,3 +326,26 @@ const statusTone: Record<number, string> = {
     </BaseModal>
   </div>
 </template>
+
+<style scoped>
+.data-source-tip.error {
+  color: var(--red, #c0392b);
+}
+
+.log-time {
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.log-path {
+  max-width: 300px;
+  white-space: normal;
+  word-break: break-all;
+  font-size: 11px;
+}
+
+.log-ip {
+  font-size: 11px;
+  white-space: nowrap;
+}
+</style>

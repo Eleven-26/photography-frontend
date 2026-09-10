@@ -36,7 +36,19 @@ export const API_PATHS = {
     create: 'lead/create',
     update: 'lead/update',
     follow: 'lead/follow',
-    convert: 'lead/convert'
+    convert: 'lead/convert',
+    // 沟通记录
+    messages: 'lead/messages',
+    messageSend: 'lead/message/send',
+    // 需求摘要（AI Brief）
+    briefList: 'lead/brief/list',
+    briefGenerate: 'lead/brief/generate'
+  },
+  // 报价单
+  quote: {
+    create: 'quote/create',
+    list: 'quote/list',
+    status: 'quote/status'
   },
   // 订单
   order: {
@@ -81,7 +93,19 @@ export const API_PATHS = {
     detail: 'asset/detail',
     create: 'asset/create',
     update: 'asset/update',
+    status: 'asset/status',
     delete: 'asset/delete'
+  },
+  // 通知
+  notification: {
+    list: 'notification/list',
+    unreadCount: 'notification/unread-count',
+    read: 'notification/read',
+    readAll: 'notification/read-all'
+  },
+  // 设置
+  settings: {
+    operationLogList: 'settings/operation-log/list'
   },
   // 工作台
   dashboard: { overview: 'dashboard/overview' }

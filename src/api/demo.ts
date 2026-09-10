@@ -131,12 +131,28 @@ export const demoCalendarSlots: CalendarSlot[] = [
 ]
 
 // ── 作品集 ────────────────────────────────────────
+const demoAssetBase = {
+  company_id: 1,
+  images: '',
+  description: '',
+  photographer: '',
+  model: '',
+  location: '',
+  shoot_date: null,
+  package_ids: '',
+  status: 2,
+  visibility: 1,
+  featured: 0,
+  authorization: 2,
+  view_count: 0
+}
+
 export const demoAssets: Asset[] = [
-  { id: 1, company_id: 1, code: 'AS-000001', title: '家庭纪念写真合集', cover: 'linear-gradient(160deg,#cfe7dd,#7fb8a4)', category: '家庭写真', content: '', status: 2, published_at: '2026-08-01T00:00:00+08:00' },
-  { id: 2, company_id: 1, code: 'AS-000002', title: '商务形象·蓝桥科技', cover: 'linear-gradient(160deg,#e5def2,#a894c9)', category: '商务肖像', content: '', status: 2, published_at: '2026-08-05T00:00:00+08:00' },
-  { id: 3, company_id: 1, code: 'AS-000003', title: '林柚·自然人像', cover: 'linear-gradient(160deg,#fdeadd,#e2a97f)', category: '写真', content: '', status: 2, published_at: '2026-07-28T00:00:00+08:00' },
-  { id: 4, company_id: 1, code: 'AS-000004', title: '张明婚礼纪实', cover: 'linear-gradient(160deg,#f4e7a9,#d9b64f)', category: '婚礼跟拍', content: '', status: 1, published_at: null },
-  { id: 5, company_id: 1, code: 'AS-000005', title: '亲子时光·李芳', cover: 'linear-gradient(160deg,#f9dcd8,#e08a80)', category: '家庭写真', content: '', status: 2, published_at: '2026-08-03T00:00:00+08:00' }
+  { ...demoAssetBase, id: 1, code: 'AS-000001', title: '家庭纪念写真合集', cover: 'linear-gradient(160deg,#cfe7dd,#7fb8a4)', category: '家庭写真', featured: 1, published_at: '2026-08-01T00:00:00+08:00' },
+  { ...demoAssetBase, id: 2, code: 'AS-000002', title: '商务形象·蓝桥科技', cover: 'linear-gradient(160deg,#e5def2,#a894c9)', category: '商务肖像', featured: 1, published_at: '2026-08-05T00:00:00+08:00' },
+  { ...demoAssetBase, id: 3, code: 'AS-000003', title: '林柚·自然人像', cover: 'linear-gradient(160deg,#fdeadd,#e2a97f)', category: '写真', published_at: '2026-07-28T00:00:00+08:00' },
+  { ...demoAssetBase, id: 4, code: 'AS-000004', title: '张明婚礼纪实', cover: 'linear-gradient(160deg,#f4e7a9,#d9b64f)', category: '婚礼跟拍', status: 1, published_at: null },
+  { ...demoAssetBase, id: 5, code: 'AS-000005', title: '亲子时光·李芳', cover: 'linear-gradient(160deg,#f9dcd8,#e08a80)', category: '家庭写真', published_at: '2026-08-03T00:00:00+08:00' }
 ]
 
 // ── 演示汇总数据 ──────────────────────────────────
