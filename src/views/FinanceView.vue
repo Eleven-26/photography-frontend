@@ -4,25 +4,27 @@ import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as financeApi from '@/api/finance'
-import * as demo from '@/api/demo'
 import { useFetch } from '@/composables/useFetch'
 import { money, formatDateTime } from '@/utils/format'
 import type { Payment, Refund } from '@/types'
 import { PAYMENT_STATUS, PAYMENT_STATUS_LABEL, REFUND_STATUS, REFUND_STATUS_LABEL } from '@/types'
 
-const overview = useFetch(() => financeApi.financeSummary(), () => demo.demoFinanceSummary())
+// 财务汇总与流水：失败即提示，不回退演示数据、不伪造成功
+const overview = useFetch(() => financeApi.financeSummary())
 
-const payFilter = reactive({ status: '' as number | '' })
-const payments = useFetch(
-  () => financeApi.listPayments(payFilter),
-  () => demo.demoPaymentsPage()
-)
+// 默认聚焦待办：收款核验默认「待核验」，退款审批默认「申请中」；
+// 下拉可切「全部状态」（后端 status 为空即不筛选）
+const payFilter = reactive({ status: PAYMENT_STATUS.PENDING as number | '' })
+const payments = useFetch(() => financeApi.listPayments(payFilter))
 
-const refundFilter = reactive({ status: '' as number | '' })
-const refunds = useFetch(
-  () => financeApi.listRefunds(refundFilter),
-  () => demo.demoRefundsPage()
-)
+const refundFilter = reactive({ status: REFUND_STATUS.APPLYING as number | '' })
+const refunds = useFetch(() => financeApi.listRefunds(refundFilter))
+
+function reloadAll() {
+  overview.load()
+  payments.load()
+  refunds.load()
+}
 
 const tab = ref<'payments' | 'refunds'>('payments')
 
@@ -56,11 +58,7 @@ function openConfirm(p: Payment) {
 async function doConfirm() {
   if (!confirming.value) return
   try {
-    try {
-      await financeApi.confirmPayment(confirming.value.id, { remark: confirmNote.value })
-    } catch {
-      /* 演示模式直接通过 */
-    }
+    await financeApi.confirmPayment(confirming.value.id, { remark: confirmNote.value })
     toastOk('已确认到账')
     confirming.value = null
     payments.load()
@@ -81,11 +79,7 @@ function openAudit(r: Refund) {
 async function doAudit(approved: boolean) {
   if (!auditing.value) return
   try {
-    try {
-      await financeApi.auditRefund(auditing.value.id, { approved, remark: auditNote.value })
-    } catch {
-      /* 演示模式直接通过 */
-    }
+    await financeApi.auditRefund(auditing.value.id, { approved, remark: auditNote.value })
     toastOk(approved ? '已通过' : '已驳回')
     auditing.value = null
     refunds.load()
@@ -105,16 +99,17 @@ async function doAudit(approved: boolean) {
         <p>收款核验与退款审批。</p>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" @click="overview.load(); payments.load(); refunds.load()">
+        <button class="btn btn-outline" @click="reloadAll">
           <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
           刷新
         </button>
       </div>
     </div>
 
-    <div v-if="overview.source === 'demo'" class="data-source-tip">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" /></svg>
-      演示数据（后端未连接）— 审批操作返回演示成功。
+    <div v-if="overview.error" class="data-source-tip">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5m0 3h.01" /></svg>
+      财务数据加载失败：{{ overview.error }}
+      <button class="btn btn-sm btn-outline" style="margin-left: auto" @click="reloadAll">重试</button>
     </div>
 
     <div class="stats-grid stats-4">

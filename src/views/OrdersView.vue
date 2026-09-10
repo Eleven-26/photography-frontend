@@ -5,34 +5,37 @@ import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as orderApi from '@/api/orders'
-import * as demo from '@/api/demo'
+import * as customerApi from '@/api/customers'
+import * as packageApi from '@/api/packages'
 import { useFetch } from '@/composables/useFetch'
-import { money, ORDER_STATUS_LABEL, orderTone, initials, formatDate } from '@/utils/format'
-import type { Order, OrderLog } from '@/types'
+import { money, formatDate, formatDateTime, initials, orderTone } from '@/utils/format'
+import { ORDER_STATUS, ORDER_STATUS_LABEL, PAYMENT_STATUS, PAYMENT_STATUS_LABEL, PACKAGE_STATUS } from '@/types'
+import type { Order, OrderLog, Payment, Refund, Customer, Package } from '@/types'
 
 const route = useRoute()
 
 const query = reactive({
-  status: '' as number | '', // 订单状态 int 枚举，'' 为全部
+  status: '' as number | '', // 订单状态 int 枚举 0-7，'' 为全部
   keyword: String(route.query.keyword || ''),
   page: 1,
   page_size: 10
 })
 
+// 状态页签按枚举值升序（0-待确认 排在最前）
 const statusTabs: { key: number | ''; label: string }[] = [
   { key: '', label: '全部订单' },
-  ...Object.entries(ORDER_STATUS_LABEL).map(([key, label]) => ({ key: Number(key), label }))
+  ...Object.entries(ORDER_STATUS_LABEL)
+    .map(([key, label]) => ({ key: Number(key), label }))
+    .sort((a, b) => a.key - b.key)
 ]
 
-const pageRes = useFetch(
-  () => orderApi.listOrders(query),
-  () => demo.demoOrdersPage(query as unknown as Record<string, unknown>)
-)
+// 订单列表：失败即报错，不回退演示数据
+const pageRes = useFetch(() => orderApi.listOrders(query))
 
 const orders = computed(() => pageRes.data?.list || [])
 const total = computed(() => pageRes.data?.total || 0)
 
-watch(() => [query.status, query.page, query.keyword], () => {
+watch(() => [query.status, query.page], () => {
   pageRes.load()
 })
 
@@ -55,43 +58,73 @@ const pillClass = (s: number) => {
   return { orange: 'status-pending', mint: 'status-ok', lav: 'status-info', red: 'status-error', gray: 'status-disabled' }[t]
 }
 
+const payTone: Record<number, string> = {
+  [PAYMENT_STATUS.PENDING]: 'status-pending',
+  [PAYMENT_STATUS.CONFIRMED]: 'status-ok',
+  [PAYMENT_STATUS.UNPAID]: 'status-disabled',
+  [PAYMENT_STATUS.REFUNDED]: 'status-error'
+}
 
-// 订单详情
+const payTypeLabel: Record<string, string> = { deposit: '定金', final: '尾款', addon: '加片' }
+
+// ── 订单详情（后端返回包裹结构：order/payments/refunds/logs/delivery）──
 const detail = ref<Order | null>(null)
+const detailPayments = ref<Payment[]>([])
+const detailRefunds = ref<Refund[]>([])
+const detailLogs = ref<OrderLog[]>([])
 const detailOpen = ref(false)
 const loadingDetail = ref(false)
-const detailLogs = ref<OrderLog[]>([])
+const detailError = ref('')
 
 async function openDetail(o: Order) {
   detailOpen.value = true
   detail.value = null
+  detailPayments.value = []
+  detailRefunds.value = []
   detailLogs.value = []
+  detailError.value = ''
   loadingDetail.value = true
   try {
-    try {
-      const [ord, logs] = await Promise.all([
-        orderApi.orderDetail(o.id),
-        orderApi.orderLogs(o.id)
-      ])
-      detail.value = ord
-      detailLogs.value = logs
-    } catch {
-      detail.value = o
-      detailLogs.value = [
-        { id: 1, company_id: 1, order_id: o.id, action: 'create', from_status: '', to_status: '1', content: '创建订单', operator_id: 1, operator_name: '路鸿楼' },
-        { id: 2, company_id: 1, order_id: o.id, action: 'status', from_status: '1', to_status: String(o.status), content: `状态变更为 ${ORDER_STATUS_LABEL[o.status] || o.status}`, operator_id: 1, operator_name: '路鸿楼' }
-      ]
-    }
+    const res = await orderApi.orderDetail(o.id)
+    detail.value = res.order
+    detailPayments.value = res.payments || []
+    detailRefunds.value = res.refunds || []
+    detailLogs.value = res.logs || []
+  } catch (e) {
+    detailError.value = e instanceof Error ? e.message : '订单详情加载失败'
   } finally {
     loadingDetail.value = false
   }
 }
 
-// 新建订单
+// ── 待确认订单 → 确认预约（0-待确认 → 1-待定金，后端状态机允许）──
+const confirmingID = ref<number | null>(null)
+
+async function confirmOrder(o: Order) {
+  confirmingID.value = o.id
+  try {
+    await orderApi.updateOrderStatus(o.id, ORDER_STATUS.PENDING_DEPOSIT)
+    toastOk('已确认预约，订单进入待定金')
+    await pageRes.load()
+    if (detailOpen.value && detail.value?.id === o.id) {
+      await openDetail({ ...detail.value, status: ORDER_STATUS.PENDING_DEPOSIT })
+    }
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '确认失败')
+  } finally {
+    confirmingID.value = null
+  }
+}
+
+// ── 新建订单（客户/套餐下拉走真实接口，不再使用演示数据）──
 const createOpen = ref(false)
 const saving = ref(false)
+const optionsLoading = ref(false)
+const customerOptions = ref<Customer[]>([])
+const packageOptions = ref<Package[]>([])
+
 const form = reactive({
-  customer_id: 1 as number,
+  customer_id: 0 as number,
   package_id: 0 as number,
   shoot_date: '',
   shoot_time: '',
@@ -101,30 +134,64 @@ const form = reactive({
   remark: ''
 })
 
+async function loadOptions() {
+  optionsLoading.value = true
+  try {
+    const [cs, ps] = await Promise.all([
+      customerApi.listCustomers({ page: 1, page_size: 200 }),
+      packageApi.listPackages({ page: 1, page_size: 200, status: PACKAGE_STATUS.ACTIVE })
+    ])
+    customerOptions.value = cs.list || []
+    packageOptions.value = ps.list || []
+    if (!customerOptions.value.length) toastErr('暂无客户，请先在客户管理中建档')
+    if (!packageOptions.value.length) toastErr('暂无已上架套餐，请先在套餐管理中上架')
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '客户/套餐加载失败')
+  } finally {
+    optionsLoading.value = false
+  }
+}
+
+function openCreate() {
+  createOpen.value = true
+  if (!customerOptions.value.length || !packageOptions.value.length) {
+    void loadOptions()
+  }
+}
+
 async function saveOrder() {
+  if (!form.customer_id) {
+    toastErr('请选择客户')
+    return
+  }
   if (!form.package_id) {
     toastErr('请选择套餐')
     return
   }
   saving.value = true
   try {
-    try {
-      await orderApi.createOrder({
-        customer_id: form.customer_id,
-        package_id: form.package_id,
-        shoot_date: form.shoot_date || undefined,
-        shoot_time: form.shoot_time || undefined,
-        shoot_address: form.shoot_address || undefined,
-        photographer_id: form.photographer_id,
-        addon_amount: form.addon_amount || undefined,
-        remark: form.remark || undefined
-      })
-      toastOk('订单已创建')
-    } catch {
-      toastOk('订单已创建（演示模式）')
-    }
+    await orderApi.createOrder({
+      customer_id: form.customer_id,
+      package_id: form.package_id,
+      shoot_date: form.shoot_date || undefined,
+      shoot_time: form.shoot_time || undefined,
+      shoot_address: form.shoot_address || undefined,
+      photographer_id: form.photographer_id,
+      addon_amount: form.addon_amount || undefined,
+      remark: form.remark || undefined
+    })
+    toastOk('订单已创建')
     createOpen.value = false
-    pageRes.load()
+    form.customer_id = 0
+    form.package_id = 0
+    form.shoot_date = ''
+    form.shoot_time = ''
+    form.shoot_address = ''
+    form.addon_amount = 0
+    form.remark = ''
+    await pageRes.load()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '创建失败')
   } finally {
     saving.value = false
   }
@@ -145,13 +212,14 @@ async function saveOrder() {
           <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
           刷新
         </button>
-        <button class="btn btn-primary" @click="createOpen = true">+ 新建订单</button>
+        <button class="btn btn-primary" @click="openCreate">+ 新建订单</button>
       </div>
     </div>
 
-    <div v-if="pageRes.source === 'demo'" class="data-source-tip">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" /></svg>
-      演示数据（后端未连接）— 新建操作返回演示成功。
+    <div v-if="pageRes.error" class="data-source-tip error">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5m0 3h.01" /></svg>
+      订单加载失败：{{ pageRes.error }}
+      <button class="btn btn-sm btn-outline" style="margin-left: auto" @click="pageRes.load()">重试</button>
     </div>
 
     <div class="tabs">
@@ -162,7 +230,7 @@ async function saveOrder() {
         :class="{ active: query.status === s.key }"
         @click="setStatus(s.key)"
       >
-        {{ s.label }}{{ s.key ? '' : ` · ${total}` }}
+        {{ s.label }}{{ s.key === '' ? ` · ${total}` : '' }}
       </button>
     </div>
 
@@ -191,7 +259,7 @@ async function saveOrder() {
               <th>金额</th>
               <th>拍摄时间</th>
               <th>主拍</th>
-              <th style="width: 80px"></th>
+              <th style="width: 150px"></th>
             </tr>
           </thead>
           <tbody>
@@ -221,15 +289,25 @@ async function saveOrder() {
               </td>
               <td>{{ o.photographer || '—' }}</td>
               <td>
-                <button class="btn btn-sm btn-outline" @click="openDetail(o)">详情</button>
+                <div class="flex gap-6">
+                  <button
+                    v-if="o.status === ORDER_STATUS.PENDING_CONFIRM"
+                    class="btn btn-sm btn-primary"
+                    :disabled="confirmingID === o.id"
+                    @click="confirmOrder(o)"
+                  >
+                    {{ confirmingID === o.id ? '确认中' : '确认预约' }}
+                  </button>
+                  <button class="btn btn-sm btn-outline" @click="openDetail(o)">详情</button>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
       <div v-if="!orders.length && !pageRes.loading" class="empty-state">
-        <strong>暂无订单</strong>
-        <p>调整筛选条件或新建一笔订单。</p>
+        <strong>{{ pageRes.error ? '加载失败' : '暂无订单' }}</strong>
+        <p>{{ pageRes.error ? pageRes.error : '调整筛选条件或新建一笔订单。' }}</p>
       </div>
 
       <div class="pager" v-if="total > query.page_size!">
@@ -253,12 +331,20 @@ async function saveOrder() {
     <div v-if="detailOpen" class="drawer-backdrop" @click="detailOpen = false"></div>
     <div v-if="detailOpen" class="drawer">
       <div class="drawer-head">
-        <h3>订单详情 · {{ detail?.code }}</h3>
+        <h3>订单详情 · {{ detail?.code || '' }}</h3>
         <button class="modal-close" style="margin-left: auto" @click="detailOpen = false">
           <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
       </div>
-      <div class="drawer-body" v-if="detail">
+
+      <div class="drawer-body" v-if="detailError" style="display: grid; place-items: center; color: var(--muted); text-align: center">
+        <div>
+          <strong>详情加载失败</strong>
+          <p class="xsmall mt-8">{{ detailError }}</p>
+        </div>
+      </div>
+
+      <div class="drawer-body" v-else-if="detail">
         <div class="detail-hero">
           <div>
             <div class="serif" style="font-size: 19px; font-weight: 700">{{ detail.customer_name }}</div>
@@ -277,7 +363,21 @@ async function saveOrder() {
           <div class="field"><span class="field-label">主拍摄影师</span><span>{{ detail.photographer || '未分配' }}</span></div>
           <div class="field"><span class="field-label">定金</span><span>{{ money(detail.deposit_amt) }}</span></div>
           <div class="field"><span class="field-label">尾款</span><span>{{ money(detail.final_amt) }}</span></div>
+          <div class="field"><span class="field-label">已收 / 已退</span><span>{{ money(detail.paid_amt) }} / {{ money(detail.refund_amt) }}</span></div>
+          <div class="field"><span class="field-label">加片金额</span><span>{{ money(detail.addon_amount) }}</span></div>
         </div>
+
+        <div class="divider"></div>
+        <div class="section-title" style="margin-top: 0"><h2>收款记录</h2><span>{{ detailPayments.length }} 笔</span></div>
+        <div v-if="detailPayments.length" class="pay-list">
+          <div v-for="p in detailPayments" :key="p.id" class="pay-row">
+            <span class="pill" :class="payTone[p.status] || 'status-disabled'">{{ PAYMENT_STATUS_LABEL[p.status] || p.status }}</span>
+            <span class="cell-main">{{ payTypeLabel[p.type] || p.type }}</span>
+            <span class="cell-sub">{{ formatDateTime(p.paid_at) || '—' }}</span>
+            <span class="strong" style="margin-left: auto">{{ money(p.amount) }}</span>
+          </div>
+        </div>
+        <div v-else class="empty-state"><strong>暂无收款记录</strong></div>
 
         <div class="divider"></div>
         <div class="section-title" style="margin-top: 0"><h2>动态时间线</h2></div>
@@ -292,11 +392,21 @@ async function saveOrder() {
         </div>
         <div v-else class="empty-state"><strong>暂无动态</strong></div>
       </div>
+
       <div class="drawer-body" v-else style="display: grid; place-items: center; color: var(--muted)">
         <span class="icon spin"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /></svg></span>
       </div>
+
       <div class="drawer-foot">
-        <button class="btn btn-ghost" @click="detailOpen = false">关闭</button>
+        <button
+          v-if="detail && detail.status === ORDER_STATUS.PENDING_CONFIRM"
+          class="btn btn-primary"
+          :disabled="confirmingID === detail.id"
+          @click="confirmOrder(detail)"
+        >
+          {{ confirmingID === detail.id ? '确认中…' : '确认预约' }}
+        </button>
+        <button class="btn btn-ghost" style="margin-left: auto" @click="detailOpen = false">关闭</button>
       </div>
     </div>
 
@@ -304,16 +414,19 @@ async function saveOrder() {
     <BaseModal :open="createOpen" title="新建订单" @close="createOpen = false">
       <form id="modal-form" class="form-grid form-grid-2" @submit.prevent="saveOrder">
         <div class="field">
-          <label class="field-label">客户</label>
-          <select v-model.number="form.customer_id" class="select">
-            <option v-for="c in demo.demoCustomers" :key="c.id" :value="c.id">{{ c.name }}</option>
+          <label class="field-label"><span class="req">*</span> 客户</label>
+          <select v-model.number="form.customer_id" class="select" :disabled="optionsLoading">
+            <option :value="0" disabled>{{ optionsLoading ? '加载中…' : '请选择客户' }}</option>
+            <option v-for="c in customerOptions" :key="c.id" :value="c.id">
+              {{ c.name }}{{ c.mobile ? `（${c.mobile}）` : '' }}
+            </option>
           </select>
         </div>
         <div class="field">
           <label class="field-label"><span class="req">*</span> 套餐</label>
-          <select v-model.number="form.package_id" class="select">
-            <option :value="0" disabled>请选择套餐</option>
-            <option v-for="p in demo.demoPackages" :key="p.id" :value="p.id">{{ p.name }}（{{ money(p.base_price) }}）</option>
+          <select v-model.number="form.package_id" class="select" :disabled="optionsLoading">
+            <option :value="0" disabled>{{ optionsLoading ? '加载中…' : '请选择套餐' }}</option>
+            <option v-for="p in packageOptions" :key="p.id" :value="p.id">{{ p.name }}（{{ money(p.base_price) }}）</option>
           </select>
         </div>
         <div class="field">
@@ -339,7 +452,9 @@ async function saveOrder() {
       </form>
       <template #foot>
         <button class="btn btn-ghost" @click="createOpen = false">取消</button>
-        <button class="btn btn-primary" type="submit" form="modal-form">保存</button>
+        <button class="btn btn-primary" type="submit" form="modal-form" :disabled="saving">
+          {{ saving ? '保存中…' : '保存' }}
+        </button>
       </template>
     </BaseModal>
   </div>
@@ -359,6 +474,23 @@ async function saveOrder() {
   grid-template-columns: 1fr 1fr;
   gap: 12px 18px;
   padding: 18px 0 4px;
+}
+
+.pay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0 2px;
+}
+
+.pay-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
 }
 
 .timeline {
@@ -399,5 +531,9 @@ async function saveOrder() {
   font-size: 10px;
   color: var(--muted);
   margin-top: 3px;
+}
+
+.data-source-tip.error {
+  color: var(--red, #c0392b);
 }
 </style>

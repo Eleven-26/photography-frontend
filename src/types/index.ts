@@ -315,6 +315,20 @@ export interface Delivery {
   operator_id: number
 }
 
+// ──── 订单详情（后端 dto.OrderDetail 包裹结构）────
+/**
+ * 订单详情聚合体 — 与后端 `order/detail/:id` 返回结构一致。
+ * ⚠️ 不是 Order 本身：订单主体在 `order` 字段，其余为关联集合。
+ * 关联集合后端用 interface{} 承载，空值可能为 null，消费时需 `|| []` 兜底。
+ */
+export interface OrderDetail {
+  order: Order
+  payments: Payment[] | null
+  refunds: Refund[] | null
+  logs: OrderLog[] | null
+  delivery: Delivery | null
+}
+
 // ──── 作品集（biz_asset）────────────────────────
 export interface Asset {
   id: number

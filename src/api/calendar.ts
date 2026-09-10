@@ -1,15 +1,19 @@
 import { rpc } from './common/http'
-import type { CalendarSlot, PageResult } from '@/types'
+import type { CalendarSlot } from '@/types'
 import { API_PATHS } from './common/apiPath'
 
 export interface CalendarListParams {
-  date?: string
-  page?: number
-  page_size?: number
+  start_date?: string // 起始日期 YYYY-MM-DD
+  end_date?: string // 结束日期 YYYY-MM-DD
+  photographer_id?: number // 摄影师筛选（可选）
 }
 
+/**
+ * 档期列表：后端 `calendar/list` 返回**数组**（非分页），
+ * 筛选参数 start_date / end_date / photographer_id 走 POST body。
+ */
 export function listCalendar(params: CalendarListParams = {}) {
-  return rpc<PageResult<CalendarSlot>>(API_PATHS.calendar.list, params)
+  return rpc<CalendarSlot[]>(API_PATHS.calendar.list, params as Record<string, unknown>)
 }
 
 export function lockCalendar(data: {

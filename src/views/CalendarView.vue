@@ -4,7 +4,6 @@ import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as calendarApi from '@/api/calendar'
-import * as demo from '@/api/demo'
 import { useFetch } from '@/composables/useFetch'
 import type { CalendarSlot } from '@/types'
 
@@ -36,10 +35,8 @@ function shiftWeek(days: number) {
   week.value = weekDates()
 }
 
-const slots = useFetch<CalendarSlot[]>(
-  () => calendarApi.listCalendar({ page: 1, page_size: 200 }).then((r) => r.list),
-  () => demo.demoCalendarSlots
-)
+// 档期列表：后端 calendar/list 返回数组（非分页）
+const slots = useFetch<CalendarSlot[]>(() => calendarApi.listCalendar())
 
 function slotsFor(date: string) {
   return (slots.data || []).filter((s) => s.date === date)
@@ -95,9 +92,10 @@ async function saveSlot() {
       </div>
     </div>
 
-    <div v-if="slots.source === 'demo'" class="data-source-tip">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" /></svg>
-      演示数据（后端未连接）。
+    <div v-if="slots.error" class="data-source-tip">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5m0 3h.01" /></svg>
+      档期加载失败：{{ slots.error }}
+      <button class="btn btn-sm btn-outline" style="margin-left: auto" @click="slots.load">重试</button>
     </div>
 
     <div class="card card-pad week-nav">

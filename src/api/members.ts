@@ -2,6 +2,7 @@ import { rpc } from './common/http'
 import type { SysUser, SysRole, PageResult } from '@/types'
 import { API_PATHS } from './common/apiPath'
 
+/** 员工列表：筛选/分页参数走 POST body */
 export function listUsers(params: Record<string, unknown> = {}) {
   return rpc<PageResult<SysUser>>(API_PATHS.user.list, params)
 }
@@ -18,6 +19,7 @@ export function deleteUser(id: number) {
   return rpc<null>(API_PATHS.user.delete, {}, id)
 }
 
+/** 角色列表（后端返回数组，非分页） */
 export function listRoles(params: Record<string, unknown> = {}) {
   return rpc<SysRole[]>(API_PATHS.role.list, params)
 }

@@ -6,14 +6,16 @@ export function financeSummary() {
   return rpc<FinanceSummary>(API_PATHS.finance.summary)
 }
 
+/** 收款流水：状态/分页参数走 POST body */
 export function listPayments(params: { status?: number | '' } = {}) {
   // status 为支付状态 int 枚举 1-4（见 PAYMENT_STATUS），'' 表示全部
-  return rpc<PageResult<Payment>>(API_PATHS.finance.payments, params)
+  return rpc<PageResult<Payment>>(API_PATHS.finance.payments, params as Record<string, unknown>)
 }
 
+/** 退款流水：分页参数走 POST body */
 export function listRefunds(params: { status?: number | '' } = {}) {
   // status 为退款状态 int 枚举 1-4（见 REFUND_STATUS），'' 表示全部
-  return rpc<PageResult<Refund>>(API_PATHS.finance.refunds, params)
+  return rpc<PageResult<Refund>>(API_PATHS.finance.refunds, params as Record<string, unknown>)
 }
 
 export function confirmPayment(id: number, data?: { remark?: string }) {

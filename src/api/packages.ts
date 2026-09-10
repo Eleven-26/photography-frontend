@@ -2,6 +2,7 @@ import { rpc } from './common/http'
 import type { Package, PageResult } from '@/types'
 import { API_PATHS } from './common/apiPath'
 
+/** 套餐列表：筛选/分页参数走 POST body */
 export function listPackages(params: Record<string, unknown> = {}) {
   return rpc<PageResult<Package>>(API_PATHS['package'].list, params)
 }

@@ -2,6 +2,7 @@ import { rpc } from './common/http'
 import type { Asset, PageResult } from '@/types'
 import { API_PATHS } from './common/apiPath'
 
+/** 作品列表：筛选/分页参数走 POST body */
 export function listAssets(params: Record<string, unknown> = {}) {
   return rpc<PageResult<Asset>>(API_PATHS.asset.list, params)
 }

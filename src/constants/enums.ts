@@ -4,6 +4,7 @@
 
 /** 订单状态（enum.OrderStatus） */
 export const ORDER_STATUS = {
+  PENDING_CONFIRM: 0, // 待确认（客户 H5/小程序 预约，待工作室确认）
   PENDING_DEPOSIT: 1, // 待定金
   PENDING_SHOOT: 2, // 待拍摄
   SHOOTING: 3, // 拍摄中
@@ -14,6 +15,7 @@ export const ORDER_STATUS = {
 } as const
 
 export const ORDER_STATUS_LABEL: Record<number, string> = {
+  [ORDER_STATUS.PENDING_CONFIRM]: '待确认',
   [ORDER_STATUS.PENDING_DEPOSIT]: '待定金',
   [ORDER_STATUS.PENDING_SHOOT]: '待拍摄',
   [ORDER_STATUS.SHOOTING]: '拍摄中',

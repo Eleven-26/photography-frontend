@@ -2,18 +2,21 @@
 import { computed } from 'vue'
 import AppToast from '@/components/AppToast.vue'
 import * as dashboardApi from '@/api/dashboard'
-import * as demo from '@/api/demo'
+import * as orderApi from '@/api/orders'
 import { useFetch } from '@/composables/useFetch'
 import { money, moneyShort, ORDER_STATUS_LABEL, orderTone } from '@/utils/format'
 
-const overview = useFetch(() => dashboardApi.overview(), () => demo.demoOverview())
+// 工作台概览 + 近期订单：数据全部来自后端，失败即提示，不再回退演示数据
+const overview = useFetch(() => dashboardApi.overview())
+const recent = useFetch(() => orderApi.listOrders({ page: 1, page_size: 5 }))
 
-const sourceTip = computed(() => {
-  const s = overview.source
-  return s === 'demo' ? '演示数据（后端未连接）' : s === 'api' ? '实时数据' : ''
-})
+const recentOrders = computed(() => recent.data?.list || [])
+const loadError = computed(() => overview.error || recent.error)
 
-const recentOrders = demo.demoOrders.slice(0, 5)
+function reload() {
+  overview.load()
+  recent.load()
+}
 </script>
 
 <template>
@@ -23,10 +26,10 @@ const recentOrders = demo.demoOrders.slice(0, 5)
     <div class="page-head">
       <div>
         <h1>工作台</h1>
-        <p v-if="sourceTip">数据来源：{{ sourceTip }}</p>
+        <p>实时数据 · 今日概览</p>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" @click="overview.load()">
+        <button class="btn btn-outline" @click="reload">
           <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
           刷新
         </button>
@@ -34,9 +37,10 @@ const recentOrders = demo.demoOrders.slice(0, 5)
       </div>
     </div>
 
-    <div v-if="sourceTip" class="data-source-tip">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" /></svg>
-      {{ sourceTip }} — 连接后端 API 后自动切换。
+    <div v-if="loadError" class="data-source-tip">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5m0 3h.01" /></svg>
+      加载失败：{{ loadError }}
+      <button class="btn btn-sm btn-outline" style="margin-left: auto" @click="reload">重试</button>
     </div>
 
     <div class="stats-grid stats-4">

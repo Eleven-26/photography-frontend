@@ -10,8 +10,9 @@ export interface CustomerListParams {
   page_size?: number
 }
 
+/** 客户列表：筛选/分页参数走 POST body */
 export function listCustomers(params: CustomerListParams = {}) {
-  return rpc<PageResult<Customer>>(API_PATHS.customer.list, params)
+  return rpc<PageResult<Customer>>(API_PATHS.customer.list, params as Record<string, unknown>)
 }
 
 export function customerDetail(id: number) {

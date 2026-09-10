@@ -76,5 +76,9 @@ export const post = <T>(url: string, data?: unknown) =>
   request<T>({ url, method: 'POST', data })
 
 // ── 后端 RPC 风格：所有业务路由均为 POST /{apiPath}[/:id] ──
+// ⚠️ 参数位置约定：后端所有接口（含列表/查询）统一从 POST 的 **JSON body** 取参
+// （见后端 internal/pkg/params —— pager / queryStr 均读 body）。
+// 参数若放进 URL query 会被**静默忽略** → 分页、搜索、状态筛选整体失效。
+// 因此列表接口也必须用 rpc() 传 body，不要用 axios 的 params。
 export const rpc = <T>(apiPath: string, data?: unknown, id?: number | string) =>
   request<T>({ url: `${API_PREFIX}/${apiPath}${id != null ? `/${id}` : ''}`, method: 'POST', data })

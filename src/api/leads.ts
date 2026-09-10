@@ -9,8 +9,9 @@ export interface LeadListParams {
   page_size?: number
 }
 
+/** 线索列表：筛选/分页参数走 POST body */
 export function listLeads(params: LeadListParams = {}) {
-  return rpc<PageResult<Lead>>(API_PATHS.lead.list, params)
+  return rpc<PageResult<Lead>>(API_PATHS.lead.list, params as Record<string, unknown>)
 }
 
 export function leadDetail(id: number) {

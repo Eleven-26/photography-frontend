@@ -4,7 +4,6 @@ import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as customersApi from '@/api/customers'
-import * as demo from '@/api/demo'
 import { useFetch } from '@/composables/useFetch'
 import { money, initials } from '@/utils/format'
 import type { Customer } from '@/types'
@@ -21,16 +20,9 @@ const STATUS_CLASS: Record<number, string> = {
 
 const query = reactive({ keyword: '', status: '' as number | '', page: 1, page_size: 12 })
 
-console.info('[customers] 开始调用列表接口')
-const page = useFetch(
-  () => customersApi.listCustomers(query as Record<string, unknown>),
-  () => demo.demoCustomersPage(query as Record<string, unknown>)
-)
-
-const stats = useFetch(
-  () => customersApi.customerStats(),
-  () => demo.demoCustomerStats()
-)
+// 客户列表与统计：失败即提示，不回退演示数据
+const page = useFetch(() => customersApi.listCustomers(query as Record<string, unknown>))
+const stats = useFetch(() => customersApi.customerStats())
 
 const customers = computed(() => page.data?.list || [])
 const total = computed(() => page.data?.total || 0)
@@ -86,15 +78,13 @@ async function saveEdit() {
   }
   editBusy.value = true
   try {
-    try {
-      await customersApi.updateCustomer(detail.value.id, { ...editForm })
-      toastOk('客户已更新')
-    } catch {
-      toastOk('客户已更新（演示）')
-    }
+    await customersApi.updateCustomer(detail.value.id, { ...editForm })
+    toastOk('客户已更新')
     editing.value = false
     page.load()
     stats.load()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '更新失败')
   } finally {
     editBusy.value = false
   }
@@ -117,17 +107,13 @@ async function saveCustomer() {
     return
   }
   try {
-    try {
-      await customersApi.createCustomer({ ...form })
-      toastOk('客户已创建')
-    } catch {
-      toastOk('客户已创建（演示）')
-    }
+    await customersApi.createCustomer({ ...form })
+    toastOk('客户已创建')
     createOpen.value = false
     page.load()
     stats.load()
-  } catch {
-    /* noop */
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '创建失败')
   }
 }
 </script>
@@ -149,9 +135,10 @@ async function saveCustomer() {
       </div>
     </div>
 
-    <div v-if="page.source === 'demo'" class="data-source-tip">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" /></svg>
-      演示数据（后端未连接）。
+    <div v-if="page.error" class="data-source-tip">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5m0 3h.01" /></svg>
+      客户数据加载失败：{{ page.error }}
+      <button class="btn btn-sm btn-outline" style="margin-left: auto" @click="page.load(); stats.load()">重试</button>
     </div>
 
     <div class="stats-grid stats-4">
@@ -289,10 +276,10 @@ async function saveCustomer() {
             <div class="field">
               <label class="field-label">等级</label>
               <select v-model="editForm.level" class="select">
-                <option value="normal">普通</option>
-                <option value="gold">黄金</option>
-                <option value="platinum">铂金</option>
-                <option value="diamond">钻石</option>
+                <option :value="CUSTOMER_LEVEL.NORMAL">普通</option>
+                <option :value="CUSTOMER_LEVEL.GOLD">黄金</option>
+                <option :value="CUSTOMER_LEVEL.PLATINUM">铂金</option>
+                <option :value="CUSTOMER_LEVEL.DIAMOND">钻石</option>
               </select>
             </div>
             <div class="field">
@@ -302,9 +289,9 @@ async function saveCustomer() {
             <div class="field">
               <label class="field-label">状态</label>
               <select v-model="editForm.status" class="select">
-                <option value="potential">潜在客户</option>
-                <option value="active">活跃</option>
-                <option value="inactive">非活跃</option>
+                <option :value="CUSTOMER_STATUS.POTENTIAL">潜在客户</option>
+                <option :value="CUSTOMER_STATUS.ACTIVE">活跃</option>
+                <option :value="CUSTOMER_STATUS.INACTIVE">非活跃</option>
               </select>
             </div>
             <div class="field">

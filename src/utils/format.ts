@@ -63,6 +63,7 @@ import {
 /** 订单状态 -> 状态色（int 枚举，见 ORDER_STATUS） */
 export function orderTone(status?: number | null): string {
   switch (status) {
+    case 0: return 'orange' // 待确认（客户预约，需工作室确认）
     case 1: return 'orange' // 待定金
     case 2: return 'lav' // 待拍摄
     case 3: return 'orange' // 拍摄中
