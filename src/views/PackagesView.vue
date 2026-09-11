@@ -102,7 +102,7 @@ const statusTone: Record<number, string> = {
           <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
           刷新
         </button>
-        <button class="btn btn-primary" @click="addOpen = true">+ 新建套餐</button>
+        <button v-perm="'package:create'" class="btn btn-primary" @click="addOpen = true">+ 新建套餐</button>
       </div>
     </div>
 
@@ -133,7 +133,7 @@ const statusTone: Record<number, string> = {
         <div class="divider"></div>
         <div class="flex between">
           <span class="muted small">{{ p.content_desc || '暂无交付说明' }}</span>
-          <button class="btn btn-sm btn-outline" @click="toggleStatus(p)">
+          <button v-perm="'package:publish'" class="btn btn-sm btn-outline" @click="toggleStatus(p)">
             {{ p.status === PACKAGE_STATUS.ACTIVE ? '下线' : '上架' }}
           </button>
         </div>

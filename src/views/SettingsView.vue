@@ -7,8 +7,14 @@ import * as membersApi from '@/api/members'
 import * as settingsApi from '@/api/settings'
 import { useFetch } from '@/composables/useFetch'
 import { initials, formatDateTime } from '@/utils/format'
-import type { PaymentMethod } from '@/types'
-import { PAYMENT_METHOD_TYPE, PAYMENT_METHOD_TYPE_LABEL } from '@/types'
+import type { PaymentMethod, PermGroup, SysRole } from '@/types'
+import {
+  DATA_SCOPE,
+  DATA_SCOPE_HINT,
+  DATA_SCOPE_LABEL,
+  PAYMENT_METHOD_TYPE,
+  PAYMENT_METHOD_TYPE_LABEL
+} from '@/types'
 
 const tab = ref<'studio' | 'members' | 'roles' | 'payments' | 'logs'>('studio')
 
@@ -260,6 +266,90 @@ function roleName(id: number) {
   return roles.data?.find((r) => r.id === id)?.name || `角色 ${id}`
 }
 
+/* ── 角色权限配置（RBAC 勾选树）────────────────── */
+const rolePermOpen = ref(false)
+const rolePermLoading = ref(false)
+const rolePermSaving = ref(false)
+const rolePermRole = ref<SysRole | null>(null)
+/** 权限点全量清单：整个页面共享一份（首次打开时拉取） */
+const permCatalog = ref<PermGroup[]>([])
+const rolePermForm = reactive<{ data_scope: number; permissions: string[] }>({
+  data_scope: DATA_SCOPE.ALL,
+  permissions: []
+})
+
+function openRolePerms(r: SysRole) {
+  rolePermRole.value = r
+  rolePermForm.data_scope = r.data_scope || DATA_SCOPE.ALL
+  rolePermForm.permissions = []
+  rolePermOpen.value = true
+  void loadRolePerms(r.id)
+}
+
+async function loadRolePerms(id: number) {
+  rolePermLoading.value = true
+  try {
+    if (!permCatalog.value.length) {
+      permCatalog.value = await membersApi.roleCatalog()
+    }
+    const conf = await membersApi.rolePerms(id)
+    rolePermForm.data_scope = conf.data_scope
+    rolePermForm.permissions = conf.permissions || []
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '权限配置加载失败')
+    closeRolePerms()
+  } finally {
+    rolePermLoading.value = false
+  }
+}
+
+function closeRolePerms() {
+  rolePermOpen.value = false
+  rolePermRole.value = null
+}
+
+function groupAllChecked(g: PermGroup) {
+  return g.perms.length > 0 && g.perms.every((p) => rolePermForm.permissions.includes(p.key))
+}
+
+function groupIndeterminate(g: PermGroup) {
+  const hit = g.perms.filter((p) => rolePermForm.permissions.includes(p.key)).length
+  return hit > 0 && hit < g.perms.length
+}
+
+function toggleGroup(g: PermGroup, checked: boolean) {
+  const keys = g.perms.map((p) => p.key)
+  if (checked) {
+    rolePermForm.permissions = [...new Set([...rolePermForm.permissions, ...keys])]
+  } else {
+    rolePermForm.permissions = rolePermForm.permissions.filter((k) => !keys.includes(k))
+  }
+}
+
+function checkAllRolePerms(all: boolean) {
+  rolePermForm.permissions = all
+    ? permCatalog.value.flatMap((g) => g.perms.map((p) => p.key))
+    : []
+}
+
+async function saveRolePerms() {
+  if (!rolePermRole.value) return
+  rolePermSaving.value = true
+  try {
+    await membersApi.grantRolePerms(rolePermRole.value.id, {
+      data_scope: rolePermForm.data_scope,
+      permissions: rolePermForm.permissions
+    })
+    toastOk('权限已保存，已登录成员将即时生效')
+    closeRolePerms()
+    await roles.load()
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '保存失败')
+  } finally {
+    rolePermSaving.value = false
+  }
+}
+
 const statusTone: Record<number, string> = {
   1: 'status-ok',
   0: 'status-disabled'
@@ -275,21 +365,21 @@ const statusTone: Record<number, string> = {
         <p>把工作空间、成员权限、渠道和收款方式配置好，业务才能自动运转。</p>
       </div>
       <div class="page-actions">
-        <button v-if="tab === 'members'" class="btn btn-primary" @click="inviteOpen = true">+ 邀请成员</button>
-        <button v-else-if="tab === 'studio'" class="btn btn-primary" :disabled="savingStudio" @click="saveStudio">
+        <button v-if="tab === 'members'" v-perm="'user:create'" class="btn btn-primary" @click="inviteOpen = true">+ 邀请成员</button>
+        <button v-else-if="tab === 'studio'" v-perm="'settings:update'" class="btn btn-primary" :disabled="savingStudio" @click="saveStudio">
           {{ savingStudio ? '保存中…' : '保存修改' }}
         </button>
-        <button v-else-if="tab === 'payments'" class="btn btn-primary" @click="openPay()">+ 添加收款方式</button>
+        <button v-else-if="tab === 'payments'" v-perm="'settings:update'" class="btn btn-primary" @click="openPay()">+ 添加收款方式</button>
         <button v-else-if="tab === 'logs'" class="btn btn-outline" @click="logs.load()">刷新</button>
       </div>
     </div>
 
     <div class="tabs">
       <button class="tab" :class="{ active: tab === 'studio' }" @click="tab = 'studio'">工作室信息</button>
-      <button class="tab" :class="{ active: tab === 'members' }" @click="tab = 'members'">成员与权限</button>
-      <button class="tab" :class="{ active: tab === 'roles' }" @click="tab = 'roles'">角色</button>
+      <button v-perm="'user:view'" class="tab" :class="{ active: tab === 'members' }" @click="tab = 'members'">成员与权限</button>
+      <button v-perm="'role:view'" class="tab" :class="{ active: tab === 'roles' }" @click="tab = 'roles'">角色</button>
       <button class="tab" :class="{ active: tab === 'payments' }" @click="tab = 'payments'">收款方式</button>
-      <button class="tab" :class="{ active: tab === 'logs' }" @click="tab = 'logs'">操作日志</button>
+      <button v-perm="'log:view'" class="tab" :class="{ active: tab === 'logs' }" @click="tab = 'logs'">操作日志</button>
     </div>
 
     <!-- 工作室信息 -->
@@ -456,13 +546,91 @@ const statusTone: Record<number, string> = {
     <div v-if="tab === 'roles'">
       <div v-for="r in roles.data || []" :key="r.id" class="list-card" style="align-items: flex-start">
         <div class="list-card-left">
-          <div class="list-card-title">{{ r.name }} <span class="tag">{{ r.code }}</span></div>
+          <div class="list-card-title">
+            {{ r.name }} <span class="tag">{{ r.code }}</span>
+            <span v-if="r.code === 'admin'" class="tag" style="margin-left: 6px">内置超管</span>
+          </div>
           <div class="flex wrap gap-6 mt-12">
             <span class="tag" style="background: var(--lav); color: var(--lav-dark)">{{ r.remark }}</span>
+            <span class="tag">{{ DATA_SCOPE_LABEL[r.data_scope] || '全部数据' }}</span>
+            <span class="tag">{{ r.permission_count ?? 0 }} 个权限点</span>
           </div>
         </div>
+        <div class="flex gap-6" style="margin-left: auto">
+          <button
+            v-perm="'role:grant'"
+            class="btn btn-sm btn-outline"
+            :disabled="r.code === 'admin'"
+            :title="r.code === 'admin' ? '超管权限由代码短路固定，不可修改' : ''"
+            @click="openRolePerms(r)"
+          >
+            配置权限
+          </button>
+        </div>
+      </div>
+      <div v-if="!roles.loading && !(roles.data || []).length" class="empty-state">
+        <strong>暂无角色</strong>
       </div>
     </div>
+
+    <!-- 角色权限配置弹窗 -->
+    <BaseModal :open="rolePermOpen" :title="`配置权限 · ${rolePermRole?.name || ''}`" :width="680" @close="closeRolePerms">
+      <div v-if="rolePermLoading" class="empty-state">加载中…</div>
+      <template v-else>
+        <!-- 数据范围 -->
+        <div class="field" style="margin-bottom: 16px">
+          <span class="field-label">数据范围（决定能「看到」哪些数据）</span>
+          <div class="flex gap-6 wrap mt-8">
+            <label v-for="s in [DATA_SCOPE.ALL, DATA_SCOPE.STORE, DATA_SCOPE.SELF]" :key="s" class="scope-option">
+              <input v-model.number="rolePermForm.data_scope" type="radio" name="data_scope" :value="s" />
+              <span class="strong">{{ DATA_SCOPE_LABEL[s] }}</span>
+              <span class="muted xsmall">{{ DATA_SCOPE_HINT[s] }}</span>
+            </label>
+          </div>
+          <p v-if="rolePermRole?.code === 'admin'" class="muted xsmall mt-8">
+            超管角色由后端按角色码短路放行，此配置不会生效。
+          </p>
+        </div>
+
+        <!-- 权限勾选树 -->
+        <div class="perm-tree">
+          <div class="flex between" style="margin-bottom: 10px">
+            <span class="field-label">功能权限（决定能「操作」哪些功能）</span>
+            <div class="flex gap-6">
+              <button class="btn btn-sm btn-ghost" @click="checkAllRolePerms(true)">全选</button>
+              <button class="btn btn-sm btn-ghost" @click="checkAllRolePerms(false)">清空</button>
+            </div>
+          </div>
+          <div v-for="g in permCatalog" :key="g.module" class="perm-group">
+            <div class="perm-group-head">
+              <label class="flex gap-6" style="align-items: center; cursor: pointer">
+                <input
+                  type="checkbox"
+                  :checked="groupAllChecked(g)"
+                  :indeterminate.prop="groupIndeterminate(g)"
+                  @change="toggleGroup(g, ($event.target as HTMLInputElement).checked)"
+                />
+                <strong>{{ g.module }}</strong>
+                <span class="muted xsmall">{{ g.perms.length }} 项</span>
+              </label>
+            </div>
+            <div class="perm-items">
+              <label v-for="p in g.perms" :key="p.key" class="perm-item" :title="p.key">
+                <input v-model="rolePermForm.permissions" type="checkbox" :value="p.key" />
+                <span>{{ p.label }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <p class="muted xsmall mt-12">已选 {{ rolePermForm.permissions.length }} 个权限点；保存为全量覆盖，未勾选的权限将被移除。</p>
+      </template>
+      <template #foot>
+        <button class="btn btn-ghost" @click="closeRolePerms">取消</button>
+        <button class="btn btn-primary" :disabled="rolePermLoading || rolePermSaving" @click="saveRolePerms">
+          {{ rolePermSaving ? '保存中…' : '保存' }}
+        </button>
+      </template>
+    </BaseModal>
 
     <!-- 收款方式 -->
     <div v-if="tab === 'payments'">
@@ -740,5 +908,66 @@ const statusTone: Record<number, string> = {
 
 .kv:last-child {
   border-bottom: 0;
+}
+
+/* ── 角色权限配置 ─────────────────────────────── */
+.scope-option {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.scope-option:has(input:checked) {
+  border-color: var(--ink, #222);
+  background: var(--cream, #faf7f2);
+}
+
+.perm-tree {
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.perm-group {
+  padding: 8px 0;
+}
+
+.perm-group + .perm-group {
+  border-top: 1px dashed var(--line);
+}
+
+.perm-group-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.perm-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding-left: 24px;
+}
+
+.perm-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink, #222);
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.perm-item:hover {
+  background: var(--cream, #faf7f2);
 }
 </style>

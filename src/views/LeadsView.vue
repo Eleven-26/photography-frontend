@@ -390,7 +390,7 @@ async function copyBookingLink() {
           <svg class="icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" /></svg>
           分享预约入口
         </button>
-        <button class="btn btn-primary" @click="openCreate">+ 新建线索</button>
+        <button v-perm="'lead:create'" class="btn btn-primary" @click="openCreate">+ 新建线索</button>
       </div>
     </div>
 
@@ -493,7 +493,7 @@ async function copyBookingLink() {
               <td>
                 <div class="flex gap-6">
                   <button class="btn btn-sm btn-outline" @click="openDetail(l)">详情</button>
-                  <button class="btn btn-sm btn-primary" :disabled="!!busy" @click="follow(l)">跟进</button>
+                  <button v-perm="'lead:update'" class="btn btn-sm btn-primary" :disabled="!!busy" @click="follow(l)">跟进</button>
                 </div>
               </td>
             </tr>
@@ -641,6 +641,7 @@ async function copyBookingLink() {
                 <div class="flex gap-6 mt-12">
                   <button
                     v-if="q.status === QUOTE_STATUS.DRAFT"
+                    v-perm="'quote:update'"
                     class="btn btn-sm btn-outline"
                     :disabled="!!busy"
                     @click="changeQuoteStatus(q, QUOTE_STATUS.SENT)"
@@ -649,6 +650,7 @@ async function copyBookingLink() {
                   </button>
                   <button
                     v-if="q.status === QUOTE_STATUS.SENT || q.status === QUOTE_STATUS.DRAFT"
+                    v-perm="'quote:update'"
                     class="btn btn-sm btn-primary"
                     :disabled="!!busy"
                     @click="changeQuoteStatus(q, QUOTE_STATUS.ACCEPTED)"
@@ -657,6 +659,7 @@ async function copyBookingLink() {
                   </button>
                   <button
                     v-if="q.status === QUOTE_STATUS.SENT || q.status === QUOTE_STATUS.DRAFT"
+                    v-perm="'quote:update'"
                     class="btn btn-sm btn-outline"
                     :disabled="!!busy"
                     @click="changeQuoteStatus(q, QUOTE_STATUS.REJECTED)"
@@ -677,20 +680,21 @@ async function copyBookingLink() {
         </div>
 
         <div class="drawer-foot drawer-foot-wrap">
-          <button class="btn btn-ghost" :disabled="!!busy" @click="follow(current)">
+          <button v-perm="'lead:update'" class="btn btn-ghost" :disabled="!!busy" @click="follow(current)">
             {{ busy === `follow-${current.id}` ? '处理中…' : '标记跟进' }}
           </button>
-          <button class="btn btn-ghost" :disabled="!!busy" @click="generateBrief">生成需求摘要</button>
+          <button v-perm="'lead:update'" class="btn btn-ghost" :disabled="!!busy" @click="generateBrief">生成需求摘要</button>
           <button
             v-if="current.status !== LEAD_STATUS.LOSE && current.status !== LEAD_STATUS.CONFIRMED"
+            v-perm="'lead:update'"
             class="btn btn-danger-ghost"
             :disabled="!!busy"
             @click="loseLead(current)"
           >
             标记流失
           </button>
-          <button class="btn btn-outline" :disabled="!!busy" @click="openQuote">创建报价</button>
-          <button class="btn btn-primary" :disabled="!!busy" @click="openConvert">转订单</button>
+          <button v-perm="'quote:create'" class="btn btn-outline" :disabled="!!busy" @click="openQuote">创建报价</button>
+          <button v-perm="'lead:convert'" class="btn btn-primary" :disabled="!!busy" @click="openConvert">转订单</button>
         </div>
       </template>
     </div>

@@ -121,7 +121,7 @@ async function doAudit(approved: boolean) {
         <p>收款核验与退款审批。</p>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" :disabled="exporting" @click="doExport">
+        <button v-perm="'finance:export'" class="btn btn-outline" :disabled="exporting" @click="doExport">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16" /></svg>
           {{ exporting ? '导出中…' : '导出对账' }}
         </button>
@@ -208,6 +208,7 @@ async function doAudit(approved: boolean) {
                 <td>
                   <button
                     v-if="p.status === PAYMENT_STATUS.PENDING"
+                    v-perm="'payment:confirm'"
                     class="btn btn-sm btn-primary"
                     @click="openConfirm(p)"
                   >
@@ -265,6 +266,7 @@ async function doAudit(approved: boolean) {
                 <td>
                   <button
                     v-if="r.status === REFUND_STATUS.APPLYING"
+                    v-perm="'refund:audit'"
                     class="btn btn-sm btn-primary"
                     @click="openAudit(r)"
                   >

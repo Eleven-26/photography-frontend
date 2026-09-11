@@ -45,7 +45,10 @@ export {
   PAYMENT_METHOD_TYPE,
   PAYMENT_METHOD_TYPE_LABEL,
   ORDER_SOURCE,
-  ORDER_SOURCE_LABEL
+  ORDER_SOURCE_LABEL,
+  DATA_SCOPE,
+  DATA_SCOPE_LABEL,
+  DATA_SCOPE_HINT
 } from '@/constants/enums'
 
 /** 统一响应体 — 与后端 response.Body 对齐 */
@@ -86,6 +89,10 @@ export interface AuthUser {
   role_code: string
   company_id: number
   store_id: number
+  /** 数据范围 1-全部 2-本门店 3-仅本人（后端 UserInfoVO 下发） */
+  data_scope: number
+  /** 权限点集合，如 ['order:view','order:update']；admin 为全量 */
+  permissions: string[]
 }
 
 // ──── 系统 ──────────────────────────────────────────
@@ -121,6 +128,41 @@ export interface SysRole {
   code: string
   remark: string
   status: number
+  /** 数据范围 1-全部 2-本门店 3-仅本人 */
+  data_scope: number
+  /** 已配置的权限点数量（后端聚合返回，非数据库列） */
+  permission_count: number
+}
+
+// ──── RBAC 权限配置（角色权限勾选树）─────────────────
+
+/** 单个权限点的展示信息 */
+export interface PermDesc {
+  /** 权限点标识，如 order:view */
+  key: string
+  /** 中文名，如 查看订单 */
+  label: string
+}
+
+/** 按业务模块分组的权限点集合（顺序即展示顺序） */
+export interface PermGroup {
+  module: string
+  perms: PermDesc[]
+}
+
+/** 角色权限配置（/role/permissions/:id 回显结构） */
+export interface RolePerms {
+  role_id: number
+  role_name: string
+  role_code: string
+  data_scope: number
+  permissions: string[]
+}
+
+/** 保存角色权限的请求体（全量覆盖式） */
+export interface RoleGrantParams {
+  data_scope: number
+  permissions: string[]
 }
 
 export interface SysUser {

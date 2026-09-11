@@ -284,7 +284,7 @@ const shareWork = (w: Asset) => copyLink(`${window.location.origin}/h5/portfolio
           <svg class="icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" /></svg>
           分享作品集
         </button>
-        <button class="btn btn-primary" @click="openCreate">+ 上传作品</button>
+        <button v-perm="'asset:upload'" class="btn btn-primary" @click="openCreate">+ 上传作品</button>
       </div>
     </div>
 
@@ -336,8 +336,8 @@ const shareWork = (w: Asset) => copyLink(`${window.location.origin}/h5/portfolio
       <button class="btn btn-outline" @click="search">查询</button>
     </div>
 
-    <!-- 批量操作条 -->
-    <div v-if="selected.length" class="batch-bar">
+    <!-- 批量操作条（精选/公开均属发布审核动作 → asset:audit） -->
+    <div v-if="selected.length" v-perm="'asset:audit'" class="batch-bar">
       <span>已选 {{ selected.length }} 件</span>
       <button class="btn btn-sm btn-outline" :disabled="busy" @click="batchSet({ featured: 1 })">设为精选</button>
       <button class="btn btn-sm btn-outline" :disabled="busy" @click="batchSet({ featured: 0 })">取消精选</button>
@@ -372,9 +372,10 @@ const shareWork = (w: Asset) => copyLink(`${window.location.origin}/h5/portfolio
             <span v-if="w.status === ASSET_STATUS.DRAFT" class="pill status-draft">草稿</span>
           </div>
           <div class="pf-actions">
-            <button class="btn btn-sm btn-outline" @click="openEdit(w)">编辑</button>
+            <button v-perm="'asset:update'" class="btn btn-sm btn-outline" @click="openEdit(w)">编辑</button>
             <button class="btn btn-sm btn-outline" @click="shareWork(w)">分享</button>
             <button
+              v-perm="'asset:audit'"
               class="btn btn-sm btn-outline"
               :disabled="busy"
               @click="toggleFlag(w, { featured: w.featured === 1 ? 0 : 1 })"
@@ -382,13 +383,14 @@ const shareWork = (w: Asset) => copyLink(`${window.location.origin}/h5/portfolio
               {{ w.featured === 1 ? '取消精选' : '设为精选' }}
             </button>
             <button
+              v-perm="'asset:audit'"
               class="btn btn-sm btn-outline"
               :disabled="busy"
               @click="toggleFlag(w, { visibility: w.visibility === ASSET_VISIBILITY.PUBLIC ? ASSET_VISIBILITY.PRIVATE : ASSET_VISIBILITY.PUBLIC })"
             >
               {{ w.visibility === ASSET_VISIBILITY.PUBLIC ? '转未公开' : '转公开' }}
             </button>
-            <button class="btn btn-sm btn-ghost" :disabled="busy" @click="removeWork(w)">删除</button>
+            <button v-perm="'asset:delete'" class="btn btn-sm btn-ghost" :disabled="busy" @click="removeWork(w)">删除</button>
           </div>
         </div>
       </div>

@@ -20,7 +20,18 @@ export const API_PATHS = {
     logout: 'user/logout'
   },
   // 角色
-  role: { list: 'role/list', create: 'role/create', update: 'role/update' },
+  role: {
+    list: 'role/list',
+    create: 'role/create',
+    update: 'role/update',
+    delete: 'role/delete',
+    /** 全量权限点清单（分组），供权限勾选树渲染 */
+    catalog: 'role/catalog',
+    /** 角色权限回显（配合 id 使用：role/permissions/:id） */
+    permissions: 'role/permissions',
+    /** 保存角色权限（全量覆盖，配合 id 使用：role/grant/:id） */
+    grant: 'role/grant'
+  },
   // 客户
   customer: {
     list: 'customer/list',

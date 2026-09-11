@@ -223,7 +223,7 @@ async function confirmDelivered(d: DeliveryListItem) {
           <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
           刷新
         </button>
-        <button class="btn btn-primary" @click="openCreate">+ 新建交付任务</button>
+        <button v-perm="'delivery:create'" class="btn btn-primary" @click="openCreate">+ 新建交付任务</button>
       </div>
     </div>
 
@@ -289,7 +289,7 @@ async function confirmDelivered(d: DeliveryListItem) {
               <span v-else>负责人 {{ d.operator_id ? `#${d.operator_id}` : '未指派' }}</span>
               <span v-if="d.remark" class="muted" :title="d.remark">备注</span>
             </div>
-            <div class="task-actions">
+            <div class="task-actions" v-perm="'delivery:update'">
               <button
                 v-if="d.stage === DELIVERY_STAGE.PENDING_SAMPLES"
                 class="btn btn-sm btn-primary"

@@ -144,7 +144,7 @@ async function saveCustomer() {
           <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
           刷新
         </button>
-        <button class="btn btn-primary" @click="createOpen = true">+ 新建客户</button>
+        <button v-perm="'customer:create'" class="btn btn-primary" @click="createOpen = true">+ 新建客户</button>
       </div>
     </div>
 
@@ -355,7 +355,7 @@ async function saveCustomer() {
       <div class="drawer-foot">
         <button class="btn btn-ghost" @click="detailOpen = false">关闭</button>
         <template v-if="!editing">
-          <button class="btn btn-primary" @click="enterEdit">编辑档案</button>
+          <button v-perm="'customer:update'" class="btn btn-primary" @click="enterEdit">编辑档案</button>
         </template>
         <template v-else>
           <button class="btn btn-ghost" @click="cancelEdit">取消</button>

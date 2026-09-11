@@ -516,7 +516,7 @@ async function saveOrder() {
           <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
           刷新
         </button>
-        <button class="btn btn-primary" @click="openCreate">+ 新建订单</button>
+        <button v-perm="'order:create'" class="btn btn-primary" @click="openCreate">+ 新建订单</button>
       </div>
     </div>
 
@@ -596,6 +596,7 @@ async function saveOrder() {
                 <div class="flex gap-6">
                   <button
                     v-if="o.status === ORDER_STATUS.PENDING_CONFIRM"
+                    v-perm="'order:status'"
                     class="btn btn-sm btn-primary"
                     :disabled="confirmingID === o.id"
                     @click="confirmOrder(o)"
@@ -729,7 +730,7 @@ async function saveOrder() {
           <div v-show="detailTab === 'addons'">
             <div class="section-title" style="margin-top: 0">
               <h2>加项明细</h2>
-              <button class="btn btn-sm btn-primary" @click="openAddonCreate">+ 新增加项</button>
+              <button v-perm="'order:update'" class="btn btn-sm btn-primary" @click="openAddonCreate">+ 新增加项</button>
             </div>
             <div v-if="detailAddons.length" class="pay-list">
               <div v-for="a in detailAddons" :key="a.id" class="pay-row">
@@ -739,8 +740,8 @@ async function saveOrder() {
                 <span class="pill" :class="a.confirmed ? 'status-ok' : 'status-disabled'">{{ a.confirmed ? '客户已确认' : '待确认' }}</span>
                 <span class="strong">{{ money(a.amount) }}</span>
                 <div class="flex gap-6" style="margin-left: auto">
-                  <button class="btn btn-sm btn-outline" @click="openAddonEdit(a)">编辑</button>
-                  <button class="btn btn-sm btn-ghost" @click="removeAddon(a)">删除</button>
+                  <button v-perm="'order:update'" class="btn btn-sm btn-outline" @click="openAddonEdit(a)">编辑</button>
+                  <button v-perm="'order:update'" class="btn btn-sm btn-ghost" @click="removeAddon(a)">删除</button>
                 </div>
               </div>
             </div>
@@ -754,7 +755,7 @@ async function saveOrder() {
           <div v-show="detailTab === 'reschedule'">
             <div class="section-title" style="margin-top: 0">
               <h2>改期记录</h2>
-              <button class="btn btn-sm btn-primary" @click="openReschedule">+ 发起改期</button>
+              <button v-perm="'order:reschedule'" class="btn btn-sm btn-primary" @click="openReschedule">+ 发起改期</button>
             </div>
             <div v-if="detailReschedules.length" class="pay-list">
               <div v-for="r in detailReschedules" :key="r.id" class="rs-card">
@@ -771,7 +772,7 @@ async function saveOrder() {
                   {{ r.apply_source === 1 ? '管理端发起' : '客户申请' }}
                 </div>
                 <div v-if="r.audit_name" class="cell-sub mt-8">审批：{{ r.audit_name }}{{ r.audit_remark ? ` · ${r.audit_remark}` : '' }}</div>
-                <div v-if="r.status === RESCHEDULE_STATUS.PENDING" class="flex gap-6 mt-8">
+                <div v-if="r.status === RESCHEDULE_STATUS.PENDING" v-perm="'order:reschedule_audit'" class="flex gap-6 mt-8">
                   <button class="btn btn-sm btn-primary" :disabled="auditingID === r.id" @click="auditReschedule(r, true)">同意</button>
                   <button class="btn btn-sm btn-outline" :disabled="auditingID === r.id" @click="auditReschedule(r, false)">驳回</button>
                 </div>
@@ -827,13 +828,14 @@ async function saveOrder() {
           <button
             v-for="s in advanceTargets"
             :key="s"
+            v-perm="'order:status'"
             class="btn btn-sm btn-primary"
             :disabled="advancing"
             @click="advanceTo(s)"
           >
             {{ ADVANCE_LABEL[s] || ORDER_STATUS_LABEL[s] }}
           </button>
-          <button v-if="canCancel" class="btn btn-sm btn-ghost" :disabled="advancing" @click="openCancel">取消订单</button>
+          <button v-if="canCancel" v-perm="'order:cancel'" class="btn btn-sm btn-ghost" :disabled="advancing" @click="openCancel">取消订单</button>
         </template>
         <button class="btn btn-ghost" style="margin-left: auto" @click="detailOpen = false">关闭</button>
       </div>

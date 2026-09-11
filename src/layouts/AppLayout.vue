@@ -95,37 +95,59 @@ onBeforeUnmount(() => {
   if (timer) clearInterval(timer)
 })
 
-const navGroups = [  {
+interface NavItem {
+  path: string
+  title: string
+  icon: string
+  count: number | null
+  /** 该菜单所需权限点，与路由 meta.perm 保持一致 */
+  perm: string
+}
+
+interface NavGroup {
+  label: string
+  items: NavItem[]
+}
+
+const navGroupsRaw: NavGroup[] = [
+  {
     label: '工作台',
     items: [
-      { path: '/dashboard', title: '工作台', icon: 'M3 11.5 12 4l9 7.5', count: null }
+      { path: '/dashboard', title: '工作台', icon: 'M3 11.5 12 4l9 7.5', count: null, perm: 'dashboard:view' }
     ]
   },
   {
     label: '客户与订单',
     items: [
-      { path: '/orders', title: '订单管理', icon: 'M4 5l13 0M4 12l13 0M4 19l9 0', count: null },
-      { path: '/leads', title: '线索与报价', icon: 'M4 6h16M4 12h16M4 18h10', count: null },
-      { path: '/customers', title: '客户管理', icon: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 9a6 6 0 0 0-12 0', count: null }
+      { path: '/orders', title: '订单管理', icon: 'M4 5l13 0M4 12l13 0M4 19l9 0', count: null, perm: 'order:view' },
+      { path: '/leads', title: '线索与报价', icon: 'M4 6h16M4 12h16M4 18h10', count: null, perm: 'lead:view' },
+      { path: '/customers', title: '客户管理', icon: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 9a6 6 0 0 0-12 0', count: null, perm: 'customer:view' }
     ]
   },
   {
     label: '排期与服务',
     items: [
-      { path: '/calendar', title: '日程与档期', icon: 'M6 3v3M18 3v3M3.5 8h17', count: null },
-      { path: '/delivery', title: '选片与精修', icon: 'M12 3 5 7v10l7 4 7-4V7l-7-4Z', count: null },
-      { path: '/packages', title: '套餐管理', icon: 'M6 3h12l2 3H4l2-3Zm-1 3h14l-3 14H8L5 6Z', count: null },
-      { path: '/portfolio', title: '作品集', icon: 'M3 5h18v14H3V5Zm6 0 4-4 4 4', count: null }
+      { path: '/calendar', title: '日程与档期', icon: 'M6 3v3M18 3v3M3.5 8h17', count: null, perm: 'calendar:view' },
+      { path: '/delivery', title: '选片与精修', icon: 'M12 3 5 7v10l7 4 7-4V7l-7-4Z', count: null, perm: 'delivery:view' },
+      { path: '/packages', title: '套餐管理', icon: 'M6 3h12l2 3H4l2-3Zm-1 3h14l-3 14H8L5 6Z', count: null, perm: 'package:view' },
+      { path: '/portfolio', title: '作品集', icon: 'M3 5h18v14H3V5Zm6 0 4-4 4 4', count: null, perm: 'asset:view' }
     ]
   },
   {
     label: '经营',
     items: [
-      { path: '/finance', title: '财务与对账', icon: 'M6 4h12v16H6V4Zm0 5h12M9 14h6', count: null },
-      { path: '/settings', title: '工作室设置', icon: 'm12 3 2 1 2-1 1 2 2 1-1 2 1 2-2 1-1 2-2-1-2 1-1-2-2-1 1-2-1-2 2-1 1-2ZM18 18l1 1', count: null }
+      { path: '/finance', title: '财务与对账', icon: 'M6 4h12v16H6V4Zm0 5h12M9 14h6', count: null, perm: 'finance:view' },
+      { path: '/settings', title: '工作室设置', icon: 'm12 3 2 1 2-1 1 2 2 1-1 2 1 2-2 1-1 2-2-1-2 1-1-2-2-1 1-2-1-2 2-1 1-2ZM18 18l1 1', count: null, perm: 'settings:view' }
     ]
   }
 ]
+
+/** 菜单按权限过滤：无权限的条目隐藏，整组为空则整组隐藏 */
+const navGroups = computed(() =>
+  navGroupsRaw
+    .map((g) => ({ ...g, items: g.items.filter((i) => auth.hasPerm(i.perm)) }))
+    .filter((g) => g.items.length > 0)
+)
 
 function isActive(path: string) {
   return route.path.startsWith(path)

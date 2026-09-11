@@ -1,5 +1,5 @@
 import { rpc } from './common/http'
-import type { SysUser, SysRole, PageResult } from '@/types'
+import type { SysUser, SysRole, PageResult, PermGroup, RolePerms, RoleGrantParams } from '@/types'
 import { API_PATHS } from './common/apiPath'
 
 /** 员工列表：筛选/分页参数走 POST body */
@@ -30,4 +30,25 @@ export function createRole(data: Partial<SysRole>) {
 
 export function updateRole(id: number, data: Partial<SysRole>) {
   return rpc<SysRole>(API_PATHS.role.update, data, id)
+}
+
+export function deleteRole(id: number) {
+  return rpc<null>(API_PATHS.role.delete, {}, id)
+}
+
+// ── RBAC 角色权限配置 ──────────────────────────────
+
+/** 全量权限点清单（按业务模块分组），供权限勾选树渲染选项 */
+export function roleCatalog() {
+  return rpc<PermGroup[]>(API_PATHS.role.catalog)
+}
+
+/** 读取角色当前权限配置（数据范围 + 已选权限点），用于回显 */
+export function rolePerms(id: number) {
+  return rpc<RolePerms>(API_PATHS.role.permissions, {}, id)
+}
+
+/** 保存角色权限（全量覆盖：data_scope + permissions） */
+export function grantRolePerms(id: number, data: RoleGrantParams) {
+  return rpc<null>(API_PATHS.role.grant, data, id)
 }

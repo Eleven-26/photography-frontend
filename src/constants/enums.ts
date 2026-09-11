@@ -290,3 +290,23 @@ export const PAYMENT_METHOD_TYPE_LABEL: Record<string, string> = {
   [PAYMENT_METHOD_TYPE.CASH]: '现金',
   [PAYMENT_METHOD_TYPE.OTHER]: '其他'
 }
+
+/** 角色数据范围（sys_role.data_scope，与后端 domain.DataScope 对齐） */
+export const DATA_SCOPE = {
+  ALL: 1, // 全部数据
+  STORE: 2, // 本门店
+  SELF: 3 // 仅本人
+} as const
+
+export const DATA_SCOPE_LABEL: Record<number, string> = {
+  [DATA_SCOPE.ALL]: '全部数据',
+  [DATA_SCOPE.STORE]: '本门店数据',
+  [DATA_SCOPE.SELF]: '仅本人数据'
+}
+
+/** 数据范围说明（配置界面辅助文案） */
+export const DATA_SCOPE_HINT: Record<number, string> = {
+  [DATA_SCOPE.ALL]: '可查看公司下全部门店的数据',
+  [DATA_SCOPE.STORE]: '仅可查看所属门店的数据',
+  [DATA_SCOPE.SELF]: '仅可查看本人负责（或被指派）的数据'
+}
