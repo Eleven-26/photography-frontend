@@ -9,6 +9,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "verify": "npm run typecheck && npm run lint",
     "docker:build": "docker build -t slot-admin-frontend:latest .",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down"
@@ -20,10 +23,16 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.10.5",
     "@vitejs/plugin-vue": "^5.2.1",
+    "eslint": "^10.10.0",
+    "eslint-plugin-vue": "^10.11.0",
+    "globals": "^17.12.0",
     "typescript": "~5.6.3",
+    "typescript-eslint": "^8.70.0",
     "vite": "^6.0.7",
+    "vue-eslint-parser": "^10.4.1",
     "vue-tsc": "^2.2.0"
   }
 }
