@@ -94,10 +94,12 @@ src/
 - `build/nginx.conf`：gzip 压缩、`/assets/` 静态资源缓存 30 天、`/api/` 反向代理（重写去前缀后转发到 `backend:8080`）、SPA 路由回退到 `index.html`。容器监听 80 端口。
 
 ```bash
-npm run docker:build   # 构建前端镜像 slot-admin-frontend:latest
+npm run docker:build   # 构建并打标签 chenkangfu/photography-frontend:latest
 ```
 
-> 注意：本仓库仅包含前端镜像的 `Dockerfile` 与 Nginx 配置，**未包含 docker-compose.yml**。`npm run docker:up` / `docker:down` 脚本需要 compose 编排文件（与后端 `backend` 服务联编联启），该编排由部署方或后端仓库提供。
+> 镜像名 `chenkangfu/photography-frontend` 与后端编排（`photography-server/docker-compose.yml` 的 `frontend` 服务）保持一致，手动构建的镜像可被编排直接复用。
+>
+> **本仓库不承担服务编排**：仅包含前端镜像的 `Dockerfile` 与 Nginx 配置，**未包含 docker-compose.yml**，因此不提供 `docker:up` / `docker:down` 脚本。容器编排（与后端 `backend` 服务联编联启）统一在 `photography-server` 目录执行 `docker compose up -d --build`。
 
 ## 文档与原型
 

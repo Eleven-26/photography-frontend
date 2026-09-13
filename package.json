@@ -12,9 +12,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "verify": "npm run typecheck && npm run lint",
-    "docker:build": "docker build -t slot-admin-frontend:latest .",
-    "docker:up": "docker compose up -d --build",
-    "docker:down": "docker compose down"
+    "docker:build": "docker build -t chenkangfu/photography-frontend:latest ."
   },
   "dependencies": {
     "axios": "^1.7.9",
