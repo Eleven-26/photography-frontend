@@ -24,7 +24,7 @@ export function createLead(data: Partial<Lead>) {
 }
 
 export function updateLead(id: number, data: Partial<Lead>) {
-  return rpc<null>(API_PATHS.lead.update, data, id)
+  return rpc<null>(API_PATHS.lead.update, { ...data, id })
 }
 
 /** 记录一次跟进（累加跟进次数、刷新最近跟进时间） */
@@ -73,7 +73,7 @@ export function listQuotes(leadId: number) {
 }
 
 export function createQuote(leadId: number, data: QuoteCreateParams) {
-  return rpc<Quote>(API_PATHS.quote.create, data, leadId)
+  return rpc<Quote>(API_PATHS.quote.create, { ...data, lead_id: leadId })
 }
 
 /** 变更报价单状态 1-草稿 2-已发送 3-已接受 4-已拒绝 5-已成交 */

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
@@ -11,6 +12,8 @@ import { useFetch } from '@/composables/useFetch'
 import { formatDate } from '@/utils/format'
 import type { DeliveryListItem, Order, SysUser } from '@/types'
 import { DELIVERY_STAGE, DELIVERY_STAGE_LABEL } from '@/types'
+
+const router = useRouter()
 
 // 交付看板：真实 API，失败即提示，不回退演示数据
 const board = useFetch(() => deliveryApi.listDeliveries({ page: 1, page_size: 200 }))
@@ -59,17 +62,22 @@ function progressOf(d: DeliveryListItem) {
 
 /* ── 新建交付任务 ─────────────────────────────── */
 const createOpen = ref(false)
+const creating = ref(false)
 const orders = ref<Order[]>([])
 const users = ref<SysUser[]>([])
-const createForm = ref({
-  order_id: 0,
-  stage: DELIVERY_STAGE.PENDING_SAMPLES as number,
-  operator_id: 0,
-  raw_count: 0,
-  retouch_target: 0,
-  select_deadline: '',
-  remark: ''
-})
+
+function emptyCreateForm() {
+  return {
+    order_id: 0,
+    stage: DELIVERY_STAGE.PENDING_SAMPLES as number,
+    operator_id: 0,
+    raw_count: 0,
+    retouch_target: 0,
+    select_deadline: '',
+    remark: ''
+  }
+}
+const createForm = ref(emptyCreateForm())
 
 async function openCreate() {
   createOpen.value = true
@@ -96,8 +104,9 @@ async function saveCreate() {
     toastErr('请选择订单')
     return
   }
+  creating.value = true
   try {
-    await deliveryApi.createDelivery(createForm.value.order_id, {
+    const d = await deliveryApi.createDelivery(createForm.value.order_id, {
       stage: createForm.value.stage,
       operator_id: createForm.value.operator_id || undefined,
       raw_count: createForm.value.raw_count || undefined,
@@ -105,20 +114,26 @@ async function saveCreate() {
       select_deadline: createForm.value.select_deadline || undefined,
       remark: createForm.value.remark || undefined
     })
-    toastOk('交付任务已创建')
     createOpen.value = false
-    createForm.value = {
-      order_id: 0,
-      stage: DELIVERY_STAGE.PENDING_SAMPLES,
-      operator_id: 0,
-      raw_count: 0,
-      retouch_target: 0,
-      select_deadline: '',
-      remark: ''
+    createForm.value = emptyCreateForm()
+    await board.load()
+
+    // 后端「同一订单只允许一张交付单」：若该订单已有交付单，create 会**原样返回旧单**而不新建。
+    // 此时若旧单已到「已交付」(stage 5)，看板（只渲染 1-4）里根本看不到它 ——
+    // 用户会以为"新增了却没数据"。这里显式区分三种结果，不留静默空档。
+    const onBoard = rows.value.some((r) => r.id === d.id)
+    if (onBoard) {
+      toastOk('交付任务已创建')
+    } else if (d.stage === DELIVERY_STAGE.DELIVERED) {
+      toastOk('该订单的交付已完结（已交付），已为你打开「已交付」列表')
+      router.push('/delivery/delivered')
+    } else {
+      toastErr(`该订单已有交付任务（第 ${d.stage} 阶段），但当前数据范围看不到它`)
     }
-    board.load()
   } catch (e) {
     toastErr(e instanceof Error ? e.message : '创建失败')
+  } finally {
+    creating.value = false
   }
 }
 
@@ -162,9 +177,9 @@ async function doUpload() {
       size: r.size
     }))
     if (uploadKind.value === 'sample') {
-      await deliveryApi.uploadSamples(d.order_id, items)
+      await deliveryApi.uploadSamples(d.id, items)
     } else {
-      await deliveryApi.uploadRetouched(d.order_id, items)
+      await deliveryApi.uploadRetouched(d.id, items)
     }
     toastOk(
       errors.length
@@ -198,7 +213,7 @@ async function remind(d: DeliveryListItem) {
 async function confirmDelivered(d: DeliveryListItem) {
   busyId.value = d.id
   try {
-    await deliveryApi.confirmDelivery(d.order_id)
+    await deliveryApi.confirmDelivery(d.id)
     toastOk('已标记交付完成')
     board.load()
   } catch (e) {
@@ -223,6 +238,8 @@ async function confirmDelivered(d: DeliveryListItem) {
           刷新
         </button>
         <button v-perm="'delivery:create'" class="btn btn-primary" @click="openCreate">+ 新建交付任务</button>
+        <!-- 已交付归档入口：看板只显示 stage 1-4，已交付(5)单独成页 -->
+        <button class="btn btn-outline" @click="router.push('/delivery/delivered')">已交付</button>
       </div>
     </div>
 
@@ -368,7 +385,9 @@ async function confirmDelivered(d: DeliveryListItem) {
       </form>
       <template #foot>
         <button class="btn btn-ghost" @click="createOpen = false">取消</button>
-        <button class="btn btn-primary" type="submit" form="delivery-form">创建交付任务</button>
+        <button class="btn btn-primary" type="submit" form="delivery-form" :disabled="creating">
+          {{ creating ? '创建中…' : '创建交付任务' }}
+        </button>
       </template>
     </BaseModal>
 

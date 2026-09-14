@@ -80,6 +80,9 @@ export const post = <T>(url: string, data?: unknown) =>
 // （见后端 internal/pkg/params —— pager / queryStr 均读 body）。
 // 参数若放进 URL query 会被**静默忽略** → 分页、搜索、状态筛选整体失效。
 // 因此列表接口也必须用 rpc() 传 body，不要用 axios 的 params。
+// ⚠️ 主键位置（2026-09-14 契约变更）：**create / update 的主键从 URL 移入 body**
+// （后端对应 handler 改用 bind.BodyID，rpc() 第三个参数 id 对这两类不再使用，
+// 见 api/*.ts 的 `{ ...data, id }` 写法）；detail / status / delete 等仍走 URL 路径参数。
 export const rpc = <T>(apiPath: string, data?: unknown, id?: number | string) =>
   request<T>({ url: `${API_PREFIX}/${apiPath}${id != null ? `/${id}` : ''}`, method: 'POST', data })
 

@@ -15,7 +15,14 @@ defineEmits<{
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="modal-backdrop" @click.self="$emit('close')">
+    <!--
+      遮罩层（.modal-backdrop）承担两个职责：
+      1. 视觉：压暗并模糊底下的页面，让弹窗成为唯一焦点；
+      2. 交互：拦截点击 —— 点击弹窗外的遮罩区域**不关闭**弹窗。
+         表单类弹窗（新增/编辑）常含未保存内容，误点空白处即关闭会丢数据，
+         因此只保留「取消」按钮与右上角关闭按钮两条显式出口。
+    -->
+    <div v-if="open" class="modal-backdrop">
       <div class="modal" :style="{ maxWidth: width ? width + 'px' : undefined }">
         <div class="modal-head">
           <h3>{{ title }}</h3>

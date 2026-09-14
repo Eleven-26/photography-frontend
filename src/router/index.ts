@@ -72,6 +72,13 @@ const router = createRouter({
           meta: { title: '选片与精修', perm: 'delivery:view' }
         },
         {
+          // 已交付归档：看板只渲染 stage 1-4，已交付(5)在此页展示
+          path: 'delivery/delivered',
+          name: 'delivery-delivered',
+          component: () => import('@/views/DeliveryDeliveredView.vue'),
+          meta: { title: '已交付', perm: 'delivery:view' }
+        },
+        {
           path: 'packages',
           name: 'packages',
           component: () => import('@/views/PackagesView.vue'),

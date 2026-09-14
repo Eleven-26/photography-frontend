@@ -16,23 +16,20 @@ const pkgs = computed(() => page.data?.list || [])
 
 const addOpen = ref(false)
 const saving = ref(false)
+/** 0 = 新建；>0 = 正在编辑的套餐 id */
+const editingId = ref(0)
 const form = reactive({
   name: '',
   category: '',
   base_price: 0,
+  // 定金比例：后端是**百分数**（DDL `decimal(5,2) DEFAULT 30.00` 注释「定金比例(%)」，
+  // service 用 `base_price * deposit_rate / 100` 算 deposit_amt），
+  // 因此表单直接按 % 录入，不做 ×100 / ÷100 换算（旧代码当小数处理会把 30% 存成 0.3%）。
   deposit_rate: 0,
   photos_included: 0,
   shoot_hours: 0,
   content_desc: '',
   addon_unit_price: 0
-})
-
-/** 定金比例表单以「百分数」呈现，后端存的是小数（0.3 = 30%） */
-const depositPercent = computed({
-  get: () => Math.round((form.deposit_rate || 0) * 100),
-  set: (v: number) => {
-    form.deposit_rate = (Number(v) || 0) / 100
-  }
 })
 
 function resetForm() {
@@ -48,6 +45,28 @@ function resetForm() {
   })
 }
 
+function openCreate() {
+  resetForm()
+  editingId.value = 0
+  addOpen.value = true
+}
+
+/** 编辑：把列表行回填进表单（字段与后端 dto.PackageReq 对齐） */
+function openEdit(p: Package) {
+  Object.assign(form, {
+    name: p.name || '',
+    category: p.category || '',
+    base_price: p.base_price ?? 0,
+    deposit_rate: p.deposit_rate ?? 0,
+    photos_included: p.photos_included ?? 0,
+    shoot_hours: p.shoot_hours ?? 0,
+    content_desc: p.content_desc || '',
+    addon_unit_price: p.addon_unit_price ?? 0
+  })
+  editingId.value = p.id
+  addOpen.value = true
+}
+
 async function savePackage() {
   if (!form.name.trim()) {
     toastErr('请输入套餐名称')
@@ -59,13 +78,20 @@ async function savePackage() {
   }
   saving.value = true
   try {
-    await packageApi.createPackage({ ...form, status: PACKAGE_STATUS.DRAFT })
-    toastOk('套餐已创建（草稿，可在卡片上上架）')
+    if (editingId.value) {
+      // 编辑不传 status：后端 status=0 表示保持原值，避免把已上架套餐打回草稿
+      await packageApi.updatePackage(editingId.value, { ...form })
+      toastOk('套餐已保存')
+    } else {
+      await packageApi.createPackage({ ...form, status: PACKAGE_STATUS.DRAFT })
+      toastOk('套餐已创建（草稿，可在卡片上上架）')
+    }
     addOpen.value = false
     resetForm()
+    editingId.value = 0
     page.load()
   } catch (e) {
-    toastErr(e instanceof Error ? e.message : '创建失败')
+    toastErr(e instanceof Error ? e.message : '保存失败')
   } finally {
     saving.value = false
   }
@@ -102,7 +128,7 @@ const statusTone: Record<number, string> = {
           <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
           刷新
         </button>
-        <button v-perm="'package:create'" class="btn btn-primary" @click="addOpen = true">+ 新建套餐</button>
+        <button v-perm="'package:create'" class="btn btn-primary" @click="openCreate">+ 新建套餐</button>
       </div>
     </div>
 
@@ -123,7 +149,7 @@ const statusTone: Record<number, string> = {
         <h3 class="serif" style="margin: 13px 0 4px; font-size: 18px">{{ p.name }}</h3>
         <div class="pkg-price">
           <b>¥{{ p.base_price.toLocaleString() }}</b>
-          <span class="muted xsmall">定金 {{ Math.round((p.deposit_rate || 0) * 100) }}%</span>
+          <span class="muted xsmall">定金 {{ p.deposit_rate }}%</span>
         </div>
         <div class="pkg-meta">
           <span>精修 {{ p.photos_included }} 张</span>
@@ -133,9 +159,14 @@ const statusTone: Record<number, string> = {
         <div class="divider"></div>
         <div class="flex between">
           <span class="muted small">{{ p.content_desc || '暂无交付说明' }}</span>
-          <button v-perm="'package:publish'" class="btn btn-sm btn-outline" @click="toggleStatus(p)">
-            {{ p.status === PACKAGE_STATUS.ACTIVE ? '下线' : '上架' }}
-          </button>
+          <div class="pkg-actions">
+            <button v-perm="'package:update'" class="btn btn-sm btn-outline" @click="openEdit(p)">
+              编辑
+            </button>
+            <button v-perm="'package:publish'" class="btn btn-sm btn-outline" @click="toggleStatus(p)">
+              {{ p.status === PACKAGE_STATUS.ACTIVE ? '下线' : '上架' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -144,7 +175,11 @@ const statusTone: Record<number, string> = {
       <p>点击右上角「新建套餐」创建第一个套餐。</p>
     </div>
 
-    <BaseModal :open="addOpen" title="新建套餐" @close="addOpen = false">
+    <BaseModal
+      :open="addOpen"
+      :title="editingId ? '编辑套餐' : '新建套餐'"
+      @close="addOpen = false"
+    >
       <form id="modal-form" class="form-grid form-grid-2" @submit.prevent="savePackage">
         <div class="field">
           <label class="field-label"><span class="req">*</span> 套餐名称</label>
@@ -160,7 +195,7 @@ const statusTone: Record<number, string> = {
         </div>
         <div class="field">
           <label class="field-label">定金比例（%）</label>
-          <input v-model.number="depositPercent" class="input" type="number" min="0" max="100" />
+          <input v-model.number="form.deposit_rate" class="input" type="number" min="0" max="100" step="0.01" />
         </div>
         <div class="field">
           <label class="field-label">包含精修（张）</label>
@@ -212,5 +247,13 @@ const statusTone: Record<number, string> = {
   background: #fbfaf6;
   border-radius: 10px;
   padding: 9px 12px;
+}
+
+/* 卡片底部操作区：说明文字可压缩，按钮不换行 */
+.pkg-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+  margin-left: 12px;
 }
 </style>

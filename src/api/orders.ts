@@ -39,7 +39,7 @@ export function createOrder(data: {
 }
 
 export function updateOrder(id: number, data: Partial<Order>) {
-  return rpc<null>(API_PATHS.order.update, data, id)
+  return rpc<null>(API_PATHS.order.update, { ...data, id })
 }
 
 export function updateOrderStatus(id: number, status: number) {
@@ -68,11 +68,11 @@ export function listAddons(orderId: number) {
 }
 
 export function createAddon(orderId: number, data: AddonParams) {
-  return rpc<OrderAddon>(API_PATHS.order.addonCreate, data, orderId)
+  return rpc<OrderAddon>(API_PATHS.order.addonCreate, { ...data, order_id: orderId })
 }
 
 export function updateAddon(id: number, data: AddonParams) {
-  return rpc<OrderAddon>(API_PATHS.order.addonUpdate, data, id)
+  return rpc<OrderAddon>(API_PATHS.order.addonUpdate, { ...data, id })
 }
 
 export function deleteAddon(id: number) {

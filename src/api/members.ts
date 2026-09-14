@@ -12,7 +12,7 @@ export function createUser(data: Partial<SysUser> & { password?: string }) {
 }
 
 export function updateUser(id: number, data: Partial<SysUser>) {
-  return rpc<SysUser>(API_PATHS.user.update, data, id)
+  return rpc<SysUser>(API_PATHS.user.update, { ...data, id })
 }
 
 export function deleteUser(id: number) {
@@ -29,7 +29,7 @@ export function createRole(data: Partial<SysRole>) {
 }
 
 export function updateRole(id: number, data: Partial<SysRole>) {
-  return rpc<SysRole>(API_PATHS.role.update, data, id)
+  return rpc<SysRole>(API_PATHS.role.update, { ...data, id })
 }
 
 export function deleteRole(id: number) {

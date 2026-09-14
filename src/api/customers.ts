@@ -24,7 +24,7 @@ export function createCustomer(data: Partial<Customer>) {
 }
 
 export function updateCustomer(id: number, data: Partial<Customer>) {
-  return rpc<Customer>(API_PATHS.customer.update, data, id)
+  return rpc<Customer>(API_PATHS.customer.update, { ...data, id })
 }
 
 export function customerStats() {

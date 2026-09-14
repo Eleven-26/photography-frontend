@@ -200,15 +200,20 @@
 }
 
 /* ───────── 弹窗 ───────── */
+/* 遮罩：固定铺满视口、压暗 + 模糊底层页面。
+   z-index 取 1000（远高于侧栏 20 / 顶栏 10 / 抽屉 41），确保任何页面结构都盖得住；
+   只比 toast（utilities.css 的 .toast-wrap = 1200）低，避免弹窗内的操作反馈被遮住。 */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(22, 32, 35, 0.45);
-  backdrop-filter: blur(3px);
+  background: rgba(17, 25, 28, 0.55);
+  backdrop-filter: blur(6px);
   display: grid;
   place-items: center;
-  z-index: 40;
+  z-index: 1000;
   padding: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modal {

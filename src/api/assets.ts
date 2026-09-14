@@ -16,7 +16,7 @@ export function createAsset(data: Partial<Asset>) {
 }
 
 export function updateAsset(id: number, data: Partial<Asset>) {
-  return rpc<Asset>(API_PATHS.asset.update, data, id)
+  return rpc<Asset>(API_PATHS.asset.update, { ...data, id })
 }
 
 /**

@@ -2,9 +2,12 @@ import { rpc } from './common/http'
 import type { Delivery, DeliveryItem, DeliveryListItem, PageResult } from '@/types'
 import { API_PATHS } from './common/apiPath'
 
-// ⚠️ 除 create（:order_id）与 remind（:id 为交付单ID）外，
-// detail / items / upload-samples / select / upload-retouched / confirm 的 id
-// 均为 **order_id**（按订单反查交付单），与后端语义保持一致。
+// ⚠️ 路径参数语义（三端统一，以后端为准）：
+// - create（:order_id）、detail / items（:id）→ **order_id**（按订单反查交付单）
+// - remind / upload-samples / select / upload-retouched / confirm（:id）→ **delivery_id**
+//   后端这几条按交付单主键查（DeliveryRepo.GetByID），传 order_id 会返回
+//   40400「交付单不存在」（2026-09-14 上传精修 404 即此因）。
+// 交付工作台列表项 / 详情返回的对象同时带 id（交付单主键）与 order_id，勿混用。
 
 export interface DeliveryListParams {
   /** 阶段筛选 1-4；0/不传 = 全部 */
@@ -33,7 +36,7 @@ export interface DeliveryCreateParams {
 
 /** 新建交付任务（同一订单重复调用返回已存在的交付单，不会重复建单） */
 export function createDelivery(orderId: number, data: DeliveryCreateParams = {}) {
-  return rpc<Delivery>(API_PATHS.delivery.create, data, orderId)
+  return rpc<Delivery>(API_PATHS.delivery.create, { ...data, order_id: orderId })
 }
 
 /** 提醒交付负责人（未指派时广播给公司内启用员工） */
@@ -59,22 +62,22 @@ export interface DeliveryItemParams {
   // kind 由调用的接口决定（uploadSamples → 1 样片，uploadRetouched → 3 精修成品）。
 }
 
-/** 批量上传样片 */
-export function uploadSamples(orderId: number, items: DeliveryItemParams[]) {
-  return rpc<null>(API_PATHS.delivery.uploadSamples, { items }, orderId)
+/** 批量上传样片（:id 为交付单 ID） */
+export function uploadSamples(deliveryId: number, items: DeliveryItemParams[]) {
+  return rpc<null>(API_PATHS.delivery.uploadSamples, { items }, deliveryId)
 }
 
-/** 客户选片（业务上由 H5 触发，PC 端保留入口用于代客操作） */
-export function selectDelivery(orderId: number, itemIds: number[]) {
-  return rpc<null>(API_PATHS.delivery.select, { item_ids: itemIds }, orderId)
+/** 客户选片（业务上由 H5 触发，PC 端保留入口用于代客操作；:id 为交付单 ID） */
+export function selectDelivery(deliveryId: number, itemIds: number[]) {
+  return rpc<null>(API_PATHS.delivery.select, { item_ids: itemIds }, deliveryId)
 }
 
-/** 批量上传精修成品 */
-export function uploadRetouched(orderId: number, items: DeliveryItemParams[]) {
-  return rpc<null>(API_PATHS.delivery.uploadRetouched, { items }, orderId)
+/** 批量上传精修成品（:id 为交付单 ID） */
+export function uploadRetouched(deliveryId: number, items: DeliveryItemParams[]) {
+  return rpc<null>(API_PATHS.delivery.uploadRetouched, { items }, deliveryId)
 }
 
-/** 标记交付完成 */
-export function confirmDelivery(orderId: number) {
-  return rpc<null>(API_PATHS.delivery.confirm, {}, orderId)
+/** 标记交付完成（:id 为交付单 ID） */
+export function confirmDelivery(deliveryId: number) {
+  return rpc<null>(API_PATHS.delivery.confirm, {}, deliveryId)
 }

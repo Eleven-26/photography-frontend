@@ -89,7 +89,7 @@ export function createPaymentMethod(data: PaymentMethodParams) {
 }
 
 export function updatePaymentMethod(id: number, data: PaymentMethodParams) {
-  return rpc<null>(API_PATHS.settings.paymentMethodUpdate, data, id)
+  return rpc<null>(API_PATHS.settings.paymentMethodUpdate, { ...data, id })
 }
 
 export function deletePaymentMethod(id: number) {

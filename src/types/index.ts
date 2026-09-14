@@ -284,7 +284,9 @@ export interface Package {
   cover: string
   category: string
   base_price: number
+  /** 定金比例，**百分数**（后端 decimal(5,2) default 30.00 = 30%，非 0.3） */
   deposit_rate: number
+  /** 定金金额 = base_price × deposit_rate / 100（后端算好返回） */
   deposit_amt: number
   photos_included: number
   shoot_hours: number

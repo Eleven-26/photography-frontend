@@ -16,7 +16,7 @@ export function createPackage(data: Partial<Package>) {
 }
 
 export function updatePackage(id: number, data: Partial<Package>) {
-  return rpc<Package>(API_PATHS['package'].update, data, id)
+  return rpc<Package>(API_PATHS['package'].update, { ...data, id })
 }
 
 export function setPackageStatus(id: number, status: number) {
