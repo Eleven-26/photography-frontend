@@ -156,9 +156,8 @@ async function doUpload() {
       return
     }
     const items = results.map((r) => ({
+      // file_type 由服务端按 URL 后缀推导、kind 由调用的接口决定，前端不再上报
       url: r.url,
-      file_type: r.file_type,
-      kind: uploadKind.value,
       filename: r.file_name,
       size: r.size
     }))

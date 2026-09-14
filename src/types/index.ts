@@ -385,8 +385,8 @@ export interface OrderLog {
   company_id: number
   order_id: number
   action: string
-  from_status: string
-  to_status: string
+  from_status: number
+  to_status: number
   content: string
   operator_id: number
   operator_name: string
@@ -502,8 +502,8 @@ export interface DeliveryItem {
   delivery_id: number
   order_id: number
   url: string
-  file_type: string // image-图片 video-视频
-  kind: string // sample-样片 selected-已选 retouched-精修成品
+  file_type: number // 1-图片 2-视频 3-文件（tinyint，与 DDL 同口径）
+  kind: number // 1-样片 2-已选 3-精修成品（tinyint，与 DDL 同口径）
   filename: string
   size: number // 字节
   is_selected: number // 0-否 1-是
@@ -593,7 +593,8 @@ export interface Notification {
   id: number
   company_id: number
   receiver_id: number
-  type: 'order' | 'finance' | 'system'
+  /** 通知类型 1-订单 2-财务 3-系统（tinyint，与 DDL 同口径） */
+  type: number
   title: string
   content: string
   biz_type: string

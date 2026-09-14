@@ -53,10 +53,10 @@ export function deliveryItems(orderId: number) {
 
 export interface DeliveryItemParams {
   url: string
-  file_type?: string
-  kind?: string
   filename?: string
   size?: number
+  // file_type / kind 不再由前端上报：file_type 服务端按 URL 后缀推导，
+  // kind 由调用的接口决定（uploadSamples → 1 样片，uploadRetouched → 3 精修成品）。
 }
 
 /** 批量上传样片 */

@@ -418,7 +418,8 @@ function humanSize(n: number) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`
 }
 
-const fileKindLabel: Record<string, string> = { sample: '样片', selected: '已选', retouched: '精修成品' }
+/** 交付明细用途标签（biz_delivery_item.kind，tinyint：1-样片 2-已选 3-精修成品） */
+const fileKindLabel: Record<number, string> = { 1: '样片', 2: '已选', 3: '精修成品' }
 
 // ── 新建订单（客户/套餐下拉走真实接口，不再使用演示数据）──
 const createOpen = ref(false)

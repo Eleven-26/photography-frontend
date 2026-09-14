@@ -6,7 +6,8 @@ import { API_PREFIX } from './common/apiPath'
 export interface UploadResult {
   url: string
   file_name: string
-  file_type: string
+  /** 文件类型 1-图片 2-视频 3-文件（与 biz_upload.file_type 同口径，枚举为 int） */
+  file_type: number
   size: number
 }
 

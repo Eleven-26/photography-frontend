@@ -229,6 +229,13 @@ export const NOTIFICATION_READ = {
   READ: 1 // 已读
 } as const
 
+/** 通知类型（enum.NotificationType / sys_notification.type，tinyint） */
+export const NOTIFICATION_TYPE = {
+  ORDER: 1, // 订单
+  FINANCE: 2, // 财务
+  SYSTEM: 3 // 系统
+} as const
+
 /** 改期单状态（enum.RescheduleStatus） */
 export const RESCHEDULE_STATUS = {
   PENDING: 1, // 待确认

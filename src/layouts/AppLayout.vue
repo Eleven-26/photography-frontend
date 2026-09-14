@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import { initials, relativeTime } from '@/utils/format'
 import * as notifApi from '@/api/notifications'
+import { NOTIFICATION_TYPE } from '@/constants/enums'
 import type { Notification } from '@/types'
 
 const router = useRouter()
@@ -57,8 +58,8 @@ function toggleNotifications() {
 
 /** 通知点击跳转：按业务类型落到对应模块 */
 function notifTarget(n: Notification) {
-  if (n.biz_type === 'refund' || n.type === 'finance') return '/finance'
-  if (n.biz_type === 'order' || n.type === 'order') return '/orders'
+  if (n.biz_type === 'refund' || n.type === NOTIFICATION_TYPE.FINANCE) return '/finance'
+  if (n.biz_type === 'order' || n.type === NOTIFICATION_TYPE.ORDER) return '/orders'
   return '/dashboard'
 }
 
