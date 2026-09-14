@@ -48,6 +48,12 @@ const router = createRouter({
           meta: { title: '订单管理', perm: 'order:view' }
         },
         {
+          path: 'custom-requests',
+          name: 'custom-requests',
+          component: () => import('@/views/CustomRequestsView.vue'),
+          meta: { title: '定制需求', perm: 'request:view' }
+        },
+        {
           path: 'leads',
           name: 'leads',
           component: () => import('@/views/LeadsView.vue'),

@@ -130,6 +130,19 @@ export const CUSTOMER_LEVEL_LABEL: Record<number, string> = {
   [CUSTOMER_LEVEL.DIAMOND]: '钻石'
 }
 
+/** 定制需求状态（enum.CustomRequestStatus） */
+export const CUSTOM_REQUEST_STATUS = {
+  PENDING: 1, // 待处理
+  RESPONDED: 2, // 已响应
+  CLOSED: 3 // 已关闭
+} as const
+
+export const CUSTOM_REQUEST_STATUS_LABEL: Record<number, string> = {
+  [CUSTOM_REQUEST_STATUS.PENDING]: '待处理',
+  [CUSTOM_REQUEST_STATUS.RESPONDED]: '已响应',
+  [CUSTOM_REQUEST_STATUS.CLOSED]: '已关闭'
+}
+
 /** 套餐状态（enum.PackageStatus） */
 export const PACKAGE_STATUS = {
   DRAFT: 1, // 草稿

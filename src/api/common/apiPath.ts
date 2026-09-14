@@ -55,6 +55,13 @@ export const API_PATHS = {
     briefList: 'lead/brief/list',
     briefGenerate: 'lead/brief/generate'
   },
+  // 定制需求（H5 提交 → 后台列表 / 响应 / 转订单）
+  // list 走 POST body（status 筛选 + 分页）；respond / convert 的 :id 为定制需求主键。
+  customRequest: {
+    list: 'custom-request/list',
+    respond: 'custom-request/respond',
+    convert: 'custom-request/convert'
+  },
   // 报价单
   quote: {
     create: 'quote/create',

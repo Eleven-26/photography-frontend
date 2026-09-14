@@ -119,10 +119,13 @@ const navGroupsRaw: NavGroup[] = [
   },
   {
     label: '客户与订单',
+    // 顺序约定（2026-09-14 用户拍板）：客户 → 线索 → 定制需求 → 订单。
+    // 按"从获客到成交"的动线排列，定制需求紧邻订单（它是下单前的一条转化入口）。
     items: [
-      { path: '/orders', title: '订单管理', icon: 'M4 5l13 0M4 12l13 0M4 19l9 0', count: null, perm: 'order:view' },
+      { path: '/customers', title: '客户管理', icon: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 9a6 6 0 0 0-12 0', count: null, perm: 'customer:view' },
       { path: '/leads', title: '线索与报价', icon: 'M4 6h16M4 12h16M4 18h10', count: null, perm: 'lead:view' },
-      { path: '/customers', title: '客户管理', icon: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 9a6 6 0 0 0-12 0', count: null, perm: 'customer:view' }
+      { path: '/custom-requests', title: '定制需求', icon: 'm12 3 1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3ZM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z', count: null, perm: 'request:view' },
+      { path: '/orders', title: '订单管理', icon: 'M4 5l13 0M4 12l13 0M4 19l9 0', count: null, perm: 'order:view' }
     ]
   },
   {

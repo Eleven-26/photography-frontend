@@ -20,6 +20,8 @@ export {
   CUSTOMER_STATUS_LABEL,
   CUSTOMER_LEVEL,
   CUSTOMER_LEVEL_LABEL,
+  CUSTOM_REQUEST_STATUS,
+  CUSTOM_REQUEST_STATUS_LABEL,
   PACKAGE_STATUS,
   PACKAGE_STATUS_LABEL,
   DELIVERY_STAGE,
@@ -243,6 +245,40 @@ export interface Lead {
   next_follow_at?: string | null
   follower: number
   last_follow_at?: string | null
+}
+
+// ──── 定制需求（biz_custom_request）─────────────────
+// 由 H5 定制需求表单写入（后端 ClientSubmitCustomRequest），
+// 后台只读展示 + 响应 + 转订单；字段与 model.CustomRequest 一一对应。
+export interface CustomRequest {
+  id: number
+  company_id: number
+  /** 所属门店 0 = 公共池未归属（被响应后认领落到操作人门店） */
+  store_id: number
+  /** 客户ID：H5 登录提交或后台转单补挂后有值，游客提交可能为 0 */
+  customer_id: number
+  name: string
+  mobile: string
+  /** 拍摄类型（自由文本） */
+  project_type: string
+  /** 期望拍摄日期（自由文本，非 datetime） */
+  expected_date: string
+  location: string
+  budget_min: number
+  budget_max: number
+  detail: string
+  /** 参考图片 URL，逗号分隔 */
+  images: string
+  /** 状态 1-待处理 2-已响应 3-已关闭 */
+  status: number
+  /** 转化线索ID（预留字段） */
+  lead_id: number
+  /** 响应说明（转订单后写入「已转为订单 XXX」） */
+  response: string
+  response_by: number
+  response_at?: string | null
+  created_at: string
+  updated_at: string
 }
 
 // ──── 报价单（biz_quote）─────────────────────────
