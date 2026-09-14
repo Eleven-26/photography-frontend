@@ -237,9 +237,9 @@ async function confirmDelivered(d: DeliveryListItem) {
           <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" /></svg>
           刷新
         </button>
-        <button v-perm="'delivery:create'" class="btn btn-primary" @click="openCreate">+ 新建交付任务</button>
         <!-- 已交付归档入口：看板只显示 stage 1-4，已交付(5)单独成页 -->
         <button class="btn btn-outline" @click="router.push('/delivery/delivered')">已交付</button>
+        <button v-perm="'delivery:create'" class="btn btn-primary" @click="openCreate">+ 新建交付任务</button>
       </div>
     </div>
 
