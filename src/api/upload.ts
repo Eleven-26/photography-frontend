@@ -16,13 +16,24 @@ const UPLOAD_PATH = `${API_PREFIX}/upload/file`
 /**
  * 单文件上传（multipart/form-data，字段名 `file`）。
  * 大文件上传耗时可能超过默认 15s 超时，这里单独放宽到 60s。
+ *
+ * @param isPublic 传 true 时表单带 `public=1`，后端落**免鉴权**公开目录并返回 /media/… URL；
+ *   缺省落需登录令牌的 /uploads/…。作品集封面/图集等对外宣传物料必须用 true ——
+ *   H5 分享页的浏览者通常未登录，走鉴权目录图片会整片 401。
  */
-export function uploadFile(file: File, bizType = '', bizId = 0, storeId = 0): Promise<UploadResult> {
+export function uploadFile(
+  file: File,
+  bizType = '',
+  bizId = 0,
+  storeId = 0,
+  isPublic = false
+): Promise<UploadResult> {
   const form = new FormData()
   form.append('file', file)
   if (bizType) form.append('biz_type', bizType)
   if (bizId) form.append('biz_id', String(bizId))
   if (storeId) form.append('store_id', String(storeId))
+  if (isPublic) form.append('public', '1')
 
   return http
     .request<ApiResponse<UploadResult>>({
@@ -38,13 +49,14 @@ export function uploadFile(file: File, bizType = '', bizId = 0, storeId = 0): Pr
 export async function uploadFiles(
   files: File[],
   bizType = '',
-  bizId = 0
+  bizId = 0,
+  isPublic = false
 ): Promise<{ results: UploadResult[]; errors: { name: string; message: string }[] }> {
   const results: UploadResult[] = []
   const errors: { name: string; message: string }[] = []
   for (const f of files) {
     try {
-      results.push(await uploadFile(f, bizType, bizId))
+      results.push(await uploadFile(f, bizType, bizId, 0, isPublic))
     } catch (e) {
       errors.push({ name: f.name, message: e instanceof Error ? e.message : '上传失败' })
     }

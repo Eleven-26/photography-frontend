@@ -4,8 +4,10 @@ import AppToast from '@/components/AppToast.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import { useFetch } from '@/composables/useFetch'
+import { useStudioSetting } from '@/composables/useStudioSetting'
 import * as assetApi from '@/api/assets'
 import { listPackages } from '@/api/packages'
+import { uploadFiles } from '@/api/upload'
 import { ASSET_STATUS, ASSET_VISIBILITY, ASSET_AUTH } from '@/types'
 import type { Asset, Package } from '@/types'
 import { formatDate } from '@/utils/format'
@@ -83,8 +85,16 @@ function imageCount(w: Asset) {
   return (w.images || '').split(',').filter((s) => s.trim()).length
 }
 
+/**
+ * 是否可直接渲染的图片地址。
+ * 既有外链（http/https），也有后端上传返回的**站内相对路径** —— /media/…（公开作品图）
+ * 与 /uploads/…（历史数据）。旧实现只认 `//` 开头的外链，导致上传后的相对路径一律
+ * 退化成正占位底纹，看起来像"上传没生效"。
+ */
+const isImageUrl = (u?: string) => !!u && (/^(https?:)?\/\//.test(u) || u.startsWith('/'))
+
 const coverStyle = (w: Asset) =>
-  w.cover && /^(https?:)?\/\//.test(w.cover)
+  isImageUrl(w.cover)
     ? { backgroundImage: `url(${w.cover})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : { background: 'linear-gradient(160deg,#e7e2d8,#c9c2b4)' }
 
@@ -256,6 +266,80 @@ async function removeWork(w: Asset) {
   }
 }
 
+/* ── 图片上传（落公开媒体目录 /media）────────────── */
+// 作品集是对外宣传物料，而 H5 分享页的浏览者通常**未登录**：
+// 上传必须带 public=1 让后端落免鉴权的 /media 目录，否则图片在 H5 上会整片 401。
+const uploadingCover = ref(false)
+const uploadingImages = ref(false)
+const coverInput = ref<HTMLInputElement | null>(null)
+const imagesInput = ref<HTMLInputElement | null>(null)
+
+/** images 后端是逗号分隔串，页内以数组形态增删 */
+const imageList = computed(() =>
+  (workForm.images || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+)
+
+function setImageList(list: string[]) {
+  workForm.images = list.join(',')
+  // 封面为空时用第一张兜底：封面留空会让列表卡片退化成占位底纹
+  if (!workForm.cover && list.length) workForm.cover = list[0]
+}
+
+function openPicker(input: HTMLInputElement | null) {
+  input?.click()
+}
+
+async function onPickCover(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = '' // 复位，保证连续选同一文件也能触发 change
+  if (!files.length) return
+  uploadingCover.value = true
+  try {
+    const { results, errors } = await uploadFiles(files.slice(0, 1), 'asset', 0, true)
+    if (!results.length) {
+      toastErr(errors[0]?.message || '封面上传失败')
+      return
+    }
+    workForm.cover = results[0].url
+    toastOk('封面已上传')
+  } finally {
+    uploadingCover.value = false
+  }
+}
+
+async function onPickImages(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  if (!files.length) return
+  uploadingImages.value = true
+  try {
+    const { results, errors } = await uploadFiles(files, 'asset', 0, true)
+    if (!results.length) {
+      toastErr(errors[0]?.message || '图片上传失败')
+      return
+    }
+    setImageList([...imageList.value, ...results.map((r) => r.url)])
+    toastOk(
+      errors.length
+        ? `已上传 ${results.length} 张，${errors.length} 张失败`
+        : `已上传 ${results.length} 张`
+    )
+  } finally {
+    uploadingImages.value = false
+  }
+}
+
+function removeImage(url: string) {
+  setImageList(imageList.value.filter((u) => u !== url))
+  // 删掉的正好是封面时，顺延到剩余第一张（避免封面指向已移除的图）
+  if (workForm.cover === url) workForm.cover = imageList.value[0] || ''
+}
+
 /* ── 分享 ─────────────────────────────────────── */
 async function copyLink(text: string, tip: string) {
   try {
@@ -266,8 +350,29 @@ async function copyLink(text: string, tip: string) {
   }
 }
 
-const sharePortfolio = () => copyLink(`${window.location.origin}/h5/portfolio`, '作品集分享链接已复制')
-const shareWork = (w: Asset) => copyLink(`${window.location.origin}/h5/portfolio/${w.id}`, '作品分享链接已复制')
+// 分享地址由**后端下发**（studio/get 的 portfolio_url = share.h5_base_url + slug
+// + H5 的 hash 路由），前端不自行拼域名：改域名只需改 Nacos 配置，无需前端发版。
+// 旧实现拼的是 `window.location.origin + '/h5/portfolio'` —— 那是 PC 后台自己的域名，
+// 且 PC 端根本没有这个路由，复制出去的链接必然打不开。
+const { setting: studioSetting, load: loadStudioSetting } = useStudioSetting()
+void loadStudioSetting()
+
+function sharePortfolio() {
+  const url = studioSetting.value?.portfolio_url
+  if (!url) {
+    void loadStudioSetting() // 可能是首轮加载失败（或设置页刚改完 slug），顺手补一次
+    toastErr('暂无可分享地址：请先在「设置 · 预约主页短链标识」填写工作室标识')
+    return
+  }
+  void copyLink(url, '作品集分享链接已复制')
+}
+
+/**
+ * 单件作品的「分享」：H5 客户端目前只有作品集列表页（pages/works/index），
+ * 没有单作品详情页，故沿用作品集链接 —— 客户点开能看到全部作品（含该件）。
+ * 待 H5 增加作品详情页后，这里改为带作品 id 的 deep link。
+ */
+const shareWork = () => sharePortfolio()
 </script>
 
 <template>
@@ -373,7 +478,7 @@ const shareWork = (w: Asset) => copyLink(`${window.location.origin}/h5/portfolio
           </div>
           <div class="pf-actions">
             <button v-perm="'asset:update'" class="btn btn-sm btn-outline" @click="openEdit(w)">编辑</button>
-            <button class="btn btn-sm btn-outline" @click="shareWork(w)">分享</button>
+            <button class="btn btn-sm btn-outline" @click="shareWork()">分享</button>
             <button
               v-perm="'asset:audit'"
               class="btn btn-sm btn-outline"
@@ -429,12 +534,63 @@ const shareWork = (w: Asset) => copyLink(`${window.location.origin}/h5/portfolio
           </select>
         </div>
         <div class="field" style="grid-column: 1 / -1">
-          <label class="field-label">封面图 URL</label>
-          <input v-model="workForm.cover" class="input" placeholder="https://…（留空使用占位底纹）" />
+          <label class="field-label">封面图</label>
+          <div class="up-row">
+            <div
+              class="up-thumb"
+              :class="{ 'is-empty': !isImageUrl(workForm.cover) }"
+              :style="isImageUrl(workForm.cover) ? { backgroundImage: `url(${workForm.cover})` } : undefined"
+            >
+              <span v-if="!isImageUrl(workForm.cover)">未设置</span>
+            </div>
+            <div class="up-side">
+              <div class="up-btns">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline"
+                  :disabled="uploadingCover"
+                  @click="openPicker(coverInput)"
+                >
+                  {{ uploadingCover ? '上传中…' : workForm.cover ? '更换封面' : '上传封面' }}
+                </button>
+                <button
+                  v-if="workForm.cover"
+                  type="button"
+                  class="btn btn-sm btn-ghost"
+                  @click="workForm.cover = ''"
+                >
+                  移除
+                </button>
+              </div>
+              <p class="up-hint">留空则列表卡片显示占位底纹；从图集上传时第一张会自动补为封面</p>
+            </div>
+          </div>
+          <input ref="coverInput" type="file" accept="image/*" class="up-input" @change="onPickCover" />
         </div>
         <div class="field" style="grid-column: 1 / -1">
-          <label class="field-label">图片列表（英文逗号分隔）</label>
-          <textarea v-model="workForm.images" class="input" rows="2" placeholder="https://img1.jpg,https://img2.jpg" />
+          <label class="field-label">作品图片（{{ imageList.length }} 张）</label>
+          <div class="up-grid">
+            <div v-for="u in imageList" :key="u" class="up-cell">
+              <span class="up-cell__img" :style="{ backgroundImage: `url(${u})` }" />
+              <button type="button" class="up-cell__del" title="移除这张" @click="removeImage(u)">×</button>
+            </div>
+            <button
+              type="button"
+              class="up-cell up-cell--add"
+              :disabled="uploadingImages"
+              @click="openPicker(imagesInput)"
+            >
+              {{ uploadingImages ? '上传中…' : '+ 上传图片' }}
+            </button>
+          </div>
+          <input
+            ref="imagesInput"
+            type="file"
+            accept="image/*"
+            multiple
+            class="up-input"
+            @change="onPickImages"
+          />
         </div>
         <div class="field">
           <label class="field-label">可见性</label>
@@ -622,5 +778,112 @@ const shareWork = (w: Asset) => copyLink(`${window.location.origin}/h5/portfolio
 .pf-select-all {
   margin-top: 14px;
   font-size: 12px;
+}
+
+/* ── 上传控件（封面 + 图集）────────────────────── */
+.up-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.up-thumb {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background-position: center;
+  background-size: cover;
+}
+
+.up-thumb.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--muted);
+  background: linear-gradient(160deg, #e7e2d8, #c9c2b4);
+}
+
+.up-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.up-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.up-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* 原生 file 输入隐藏，由按钮触发（保留键盘可达性：input 仍在 DOM 中） */
+.up-input {
+  display: none;
+}
+
+.up-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.up-cell {
+  position: relative;
+  box-sizing: border-box;
+  width: 76px;
+  height: 76px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background-color: var(--white);
+}
+
+.up-cell__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-size: cover;
+}
+
+.up-cell__del {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(23, 37, 43, 0.72);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.up-cell--add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  border-color: var(--orange);
+  color: var(--orange-dark, var(--orange));
+  font-size: 11px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.up-cell--add:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

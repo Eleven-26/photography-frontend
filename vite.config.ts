@@ -22,6 +22,12 @@ export default defineConfig(({ mode }) => {
           target: backendUrl,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '')   // 去掉 /api 前缀
+        },
+        // 公开作品图（后端 /media，**不剥前缀**）：作品集封面/图集是站内相对路径，
+        // 不代理的话 dev 下浏览器会去 devServer 找 /media → 404，上传后预览与卡片封面全空白
+        '/media': {
+          target: backendUrl,
+          changeOrigin: true
         }
       }
     },

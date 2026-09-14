@@ -731,6 +731,17 @@ export interface StudioSetting {
   retain_days: number
   faq: string
   service_flow: string
+  /**
+   * 预约主页分享链接（服务端按 share.h5_base_url + slug 拼装，前端不自行拼域名）。
+   * 形如 https://slot.app/?slug=xxx&staff_id=12；未配 slug 或基址时为空串。
+   */
+  homepage_url?: string
+  /**
+   * 作品集分享链接：与 homepage_url 同基址同租户参数，落地页换成 H5 作品集页。
+   * 形如 https://slot.app/?slug=xxx&staff_id=12#/pages/works/index
+   * （H5 是 hash 路由，故 slug 在 # 之前 —— 前端只负责复制，不要再手工拼）。
+   */
+  portfolio_url?: string
 }
 
 /** 收款方式（biz_payment_method） */

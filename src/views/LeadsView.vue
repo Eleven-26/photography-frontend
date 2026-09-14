@@ -5,6 +5,7 @@ import AppToast from '@/components/AppToast.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import { useFetch } from '@/composables/useFetch'
+import { useStudioSetting } from '@/composables/useStudioSetting'
 import * as leadApi from '@/api/leads'
 import { createOrder } from '@/api/orders'
 import { listPackages } from '@/api/packages'
@@ -365,8 +366,20 @@ async function saveLead() {
 }
 
 /* ── 分享预约入口 ─────────────────────────────── */
+// 预约主页地址同样由**后端下发**（studio/get 的 homepage_url = share.h5_base_url
+// + slug + 分享人 staff_id）：改域名只需改 Nacos 配置。
+// 旧实现拼 `${window.location.origin}/h5/booking`，既是管理端自己的域名、
+// 又是管理端并不存在的路由，复制出去必然打不开。
+const { setting: studioSetting, load: loadStudioSetting } = useStudioSetting()
+void loadStudioSetting()
+
 async function copyBookingLink() {
-  const link = `${window.location.origin}/h5/booking`
+  const link = studioSetting.value?.homepage_url
+  if (!link) {
+    void loadStudioSetting()
+    toastErr('暂无可分享地址：请先在「设置 · 预约主页短链标识」填写工作室标识')
+    return
+  }
   try {
     await navigator.clipboard.writeText(link)
     toastOk('预约入口链接已复制')
