@@ -12,7 +12,7 @@ import pluginVue from 'eslint-plugin-vue'
 
 export default tseslint.config(
   // 忽略产物与依赖
-  { ignores: ['dist/**', 'node_modules/**', 'public/**', '**/*.d.ts'] },
+  { ignores: ['dist/**', 'node_modules/**', 'public/**', '**/*.d.ts', '.workbuddy/**'] },
 
   js.configs.recommended,
   ...tseslint.configs.recommended,
