@@ -255,6 +255,14 @@ export interface CustomRequest {
   company_id: number
   /** 所属门店 0 = 公共池未归属（被响应后认领落到操作人门店） */
   store_id: number
+  /**
+   * 客户指定的摄影师（0 = 未指定，由门店/工作室认领）。
+   * 来源：客户在 H5 定制需求页「选择门店 → 选择摄影师」，或由分享链接 ?staff_id= 带入
+   * （2026-09-15 起；此前定制需求链路不落摄影师，历史数据恒为 0）。列表可按该字段筛选。
+   */
+  photographer_id: number
+  /** 摄影师姓名快照（同 biz_order.photographer）：员工改名后历史需求仍显示当时的服务人 */
+  photographer: string
   /** 客户ID：H5 登录提交或后台转单补挂后有值，游客提交可能为 0 */
   customer_id: number
   name: string

@@ -5,6 +5,8 @@ import type { CustomRequest, Order, PageResult } from '@/types'
 export interface CustomRequestListParams {
   /** 状态 1-待处理 2-已响应 3-已关闭；'' 或不传 = 全部 */
   status?: number | ''
+  /** 按「客户指定的摄影师」筛选；0 或不传 = 不过滤（2026-09-15 新增） */
+  photographer_id?: number
   page?: number
   page_size?: number
 }

@@ -7,6 +7,7 @@ import { toastOk, toastErr } from '@/composables/useToast'
 import { useFetch } from '@/composables/useFetch'
 import * as crApi from '@/api/customRequests'
 import { listPackages } from '@/api/packages'
+import { listUsers } from '@/api/members'
 import { formatDateTime, formatDate, initials, money } from '@/utils/format'
 import { CUSTOM_REQUEST_STATUS, CUSTOM_REQUEST_STATUS_LABEL, PACKAGE_STATUS } from '@/types'
 import type { CustomRequest, Package } from '@/types'
@@ -15,7 +16,8 @@ const router = useRouter()
 
 /* ── 列表 ─────────────────────────────────────── */
 // 数据来自 H5「定制需求」表单（biz_custom_request）。筛选/分页参数走 POST body。
-const query = reactive({ status: '' as number | '', page: 1, page_size: 20 })
+// photographer_id：按「客户指定的摄影师」筛选，0 = 不过滤（2026-09-15 起后端支持）。
+const query = reactive({ status: '' as number | '', photographer_id: 0, page: 1, page_size: 20 })
 
 const page = useFetch(() => crApi.listCustomRequests({ ...query }))
 const list = computed(() => page.data?.list || [])
@@ -30,12 +32,33 @@ const statusTabs: { key: number | ''; label: string }[] = [
 ]
 
 watch(
-  () => [query.status, query.page],
+  () => [query.status, query.photographer_id, query.page],
   () => page.load()
 )
 
 function setStatus(key: number | '') {
   query.status = key
+  query.page = 1
+}
+
+/* ── 摄影师筛选 ───────────────────────────────── */
+// 选项来自员工列表（一次拉取，量级很小）。无 user:view 权限时该接口会 403 —— 捕获后留空，
+// 只影响这一个下拉，不影响列表本身（筛选项本来也可以由别处带进来）。
+const staffOptions = ref<{ id: number; name: string }[]>([])
+
+async function loadStaffOptions() {
+  try {
+    const res = await listUsers({ page: 1, page_size: 200 })
+    staffOptions.value = (res.list || []).map((u) => ({ id: u.id, name: u.nickname || u.username }))
+  } catch {
+    staffOptions.value = []
+  }
+}
+loadStaffOptions()
+
+/** 切换摄影师筛选（与 setStatus 同节奏：改条件即回到第一页） */
+function setPhotographer(e: Event) {
+  query.photographer_id = Number((e.target as HTMLSelectElement).value) || 0
   query.page = 1
 }
 
@@ -227,12 +250,23 @@ const customerHint = computed(() => {
       </button>
     </div>
 
+    <!-- 按「客户指定的摄影师」筛选：需求归属到人后，员工最关心「哪些是给我的」 -->
+    <div class="cr-filter">
+      <span class="xsmall muted">服务摄影师</span>
+      <select class="select" :value="query.photographer_id" @change="setPhotographer">
+        <option :value="0">全部</option>
+        <option v-for="s in staffOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
+      </select>
+      <span v-if="!staffOptions.length" class="xsmall muted">（无员工列表权限，暂无法按人筛选）</span>
+    </div>
+
     <div class="card">
       <div class="table-wrap">
         <table class="table">
           <thead>
             <tr>
               <th>客户</th>
+              <th>服务摄影师</th>
               <th>拍摄类型</th>
               <th>期望日期 / 地点</th>
               <th>预算</th>
@@ -246,6 +280,10 @@ const customerHint = computed(() => {
               <td>
                 <span class="cell-main">{{ r.name || '未填称呼' }}</span>
                 <span class="cell-sub">{{ r.mobile || '未填手机号' }}</span>
+              </td>
+              <td>
+                <span class="cell-main">{{ r.photographer || (r.photographer_id ? `#${r.photographer_id}` : '未指定') }}</span>
+                <span v-if="!r.photographer_id" class="cell-sub">由工作室安排</span>
               </td>
               <td>
                 <span class="cell-main">{{ r.project_type || '—' }}</span>
@@ -329,6 +367,7 @@ const customerHint = computed(() => {
         </div>
 
         <div class="detail-grid">
+          <div class="field"><span class="field-label">服务摄影师</span><span>{{ current.photographer || '未指定（由工作室安排）' }}</span></div>
           <div class="field"><span class="field-label">拍摄类型</span><span>{{ current.project_type || '—' }}</span></div>
           <div class="field"><span class="field-label">期望日期</span><span>{{ current.expected_date || '待定' }}</span></div>
           <div class="field"><span class="field-label">期望地点</span><span>{{ current.location || '待定' }}</span></div>
@@ -466,6 +505,14 @@ const customerHint = computed(() => {
 </template>
 
 <style scoped>
+/* 摄影师筛选行：紧贴状态页签下方（页签自带下边距，这里只补竖向对齐与间距） */
+.cr-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
 /* detail-hero / detail-grid 不在全局样式表里，各页自持一份（与 OrdersView / CustomersView 一致） */
 .detail-hero {
   display: flex;
