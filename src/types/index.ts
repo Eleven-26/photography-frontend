@@ -755,6 +755,11 @@ export interface StudioSetting {
   company_id: number
   slogan: string
   intro: string
+  /**
+   * 分享封面图 —— 预约主页（H5 C01 首页）与分享卡片顶部大图。
+   * 对外物料，上传须走 `public=1`（落免鉴权 /media 目录），否则未登录的浏览者看到空白。
+   */
+  cover_url?: string
   /** 预约主页短链标识，非空即视为已发布 */
   homepage_slug: string
   /** 接收新预约 0-暂停 1-接收 */

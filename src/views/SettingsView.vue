@@ -5,6 +5,7 @@ import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as membersApi from '@/api/members'
 import * as settingsApi from '@/api/settings'
+import { uploadFiles } from '@/api/upload'
 import { useFetch } from '@/composables/useFetch'
 import { initials, formatDateTime } from '@/utils/format'
 import type { PaymentMethod, PermGroup, SysRole } from '@/types'
@@ -50,6 +51,8 @@ watch(
 
 const studioForm = reactive({
   slogan: '',
+  /** 分享封面图（预约主页 / 分享页顶部大图）；空串 = 清空 */
+  cover_url: '',
   homepage_slug: '',
   accept_new: 1,
   lock_minutes: 15,
@@ -65,6 +68,7 @@ watch(
   (s) => {
     if (!s) return
     studioForm.slogan = s.slogan || ''
+    studioForm.cover_url = s.cover_url || ''
     studioForm.homepage_slug = s.homepage_slug || ''
     studioForm.accept_new = s.accept_new
     studioForm.lock_minutes = s.lock_minutes
@@ -97,6 +101,60 @@ async function saveStudio() {
     toastErr(e instanceof Error ? e.message : '保存失败')
   } finally {
     savingStudio.value = false
+  }
+}
+
+/**
+ * 分享封面图上传。
+ *
+ * 封面是**对外物料**（会出现在客户浏览的 H5 预约主页顶部），而 H5 浏览者通常未登录，
+ * 因此必须 `public=1` 让后端落免鉴权的 `/media` 目录 —— 走默认的 `/uploads` 会整片 401。
+ *
+ * ⚠️ 上传后**立即落库**，不再依赖页头「保存修改」。本页其余字段是"改完统一保存"，
+ * 但封面是"选完图就想看到效果"的一次性动作：早前要求再点一次保存，实测用户上传完
+ * 直接离开，回头发现又变回「未设置」，表现为"保存失败"（2026-09-15 排查确认：
+ * 后端侧 3 次上传全部成功，但 `/settings/studio/update` 一次都没被调用）。
+ */
+const uploadingCover = ref(false)
+const coverInput = ref<HTMLInputElement | null>(null)
+
+/** 站内相对路径（/media、/uploads）与外链都算已设置；空串/异常值视为未设置 */
+const isImageUrl = (u?: string) => !!u && (/^(https?:)?\/\//.test(u) || u.startsWith('/'))
+
+function openCoverPicker() {
+  coverInput.value?.click()
+}
+
+async function onPickCover(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = '' // 复位，保证连续选同一文件也能触发 change
+  if (!files.length) return
+  uploadingCover.value = true
+  try {
+    const { results, errors } = await uploadFiles(files.slice(0, 1), 'studio', 0, true)
+    if (!results.length) {
+      toastErr(errors[0]?.message || '封面上传失败')
+      return
+    }
+    await saveCover(results[0].url)
+  } finally {
+    uploadingCover.value = false
+  }
+}
+
+/**
+ * 落库封面（传空串即清空）。**成功后才回填**表单与本地缓存——失败时界面不撒谎。
+ * 与小程序端「我的预约主页」同口径（那边本就是选完即写库）。
+ */
+async function saveCover(url: string) {
+  try {
+    await settingsApi.studioUpdate({ cover_url: url })
+    studioForm.cover_url = url
+    if (studioSetting.data) studioSetting.data.cover_url = url
+    toastOk(url ? '封面已更新' : '封面已移除')
+  } catch (e) {
+    toastErr(e instanceof Error ? e.message : '封面保存失败')
   }
 }
 
@@ -445,6 +503,48 @@ const statusTone: Record<number, string> = {
           <span class="muted xsmall">规则修改后实时同步到 H5</span>
         </div>
         <div class="form-grid form-grid-2" style="max-width: 720px">
+          <div class="field" style="grid-column: 1 / -1">
+            <label class="field-label">分享封面图</label>
+            <div class="up-row">
+              <div
+                class="up-thumb"
+                :class="{ 'is-empty': !isImageUrl(studioForm.cover_url) }"
+                :style="
+                  isImageUrl(studioForm.cover_url)
+                    ? { backgroundImage: `url(${studioForm.cover_url})` }
+                    : undefined
+                "
+              >
+                <span v-if="!isImageUrl(studioForm.cover_url)">未设置</span>
+              </div>
+              <div class="up-side">
+                <div class="up-btns">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline"
+                    :disabled="uploadingCover"
+                    @click="openCoverPicker"
+                  >
+                    {{ uploadingCover ? '上传中…' : studioForm.cover_url ? '更换封面' : '上传封面' }}
+                  </button>
+                  <button
+                    v-if="studioForm.cover_url"
+                    type="button"
+                    class="btn btn-sm btn-ghost"
+                    :disabled="uploadingCover"
+                    @click="saveCover('')"
+                  >
+                    移除
+                  </button>
+                </div>
+                <p class="up-hint">
+                  客户分享出去时，预约主页（H5）顶部显示的大图；建议 3:2 横图。
+                  <strong>选图后立即生效，无需再点「保存修改」</strong>；不设置则使用纯色底，页面照常可访问。
+                </p>
+              </div>
+            </div>
+            <input ref="coverInput" type="file" accept="image/*" class="up-input" @change="onPickCover" />
+          </div>
           <div class="field">
             <label class="field-label">预约主页短链标识</label>
             <input v-model="studioForm.homepage_slug" class="input" placeholder="如 lu-studio" />
@@ -969,5 +1069,53 @@ const statusTone: Record<number, string> = {
 
 .perm-item:hover {
   background: var(--cream, #faf7f2);
+}
+
+/* 分享封面上传（规格与 PortfolioView 的 up-* 一致，两处保持同一套观感） */
+.up-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.up-thumb {
+  flex-shrink: 0;
+  width: 96px;
+  height: 64px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background-position: center;
+  background-size: cover;
+}
+
+.up-thumb.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--muted);
+  background: linear-gradient(160deg, #e7e2d8, #c9c2b4);
+}
+
+.up-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.up-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.up-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.up-input {
+  display: none;
 }
 </style>

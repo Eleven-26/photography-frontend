@@ -40,6 +40,19 @@ function openOrder(d: DeliveryListItem) {
   if (!d.order_id) return
   router.push({ path: '/orders', query: { id: String(d.order_id) } })
 }
+
+/** 进入交付详情（参数为订单 ID），透传本页已知的订单快照供页头直接使用 */
+function openDetail(d: DeliveryListItem) {
+  router.push({
+    path: `/delivery/detail/${d.order_id}`,
+    query: {
+      order_code: d.order_code || '',
+      package_name: d.package_name || '',
+      shoot_date: d.shoot_date || '',
+      customer_name: d.customer_name || ''
+    }
+  })
+}
 </script>
 
 <template>
@@ -110,7 +123,10 @@ function openOrder(d: DeliveryListItem) {
             <td>V{{ d.retouch_version }} · {{ d.retouched_count }} 张</td>
             <td class="muted">{{ d.delivered_at ? formatDate(d.delivered_at) : '—' }}</td>
             <td>
-              <button class="btn btn-sm btn-outline" @click="openOrder(d)">查看订单</button>
+              <div class="row-actions">
+                <button class="btn btn-sm btn-outline" @click="openDetail(d)">查看详情</button>
+                <button class="btn btn-sm btn-ghost" @click="openOrder(d)">查看订单</button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -122,3 +138,11 @@ function openOrder(d: DeliveryListItem) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+</style>

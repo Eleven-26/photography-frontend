@@ -85,6 +85,13 @@ const router = createRouter({
           meta: { title: '已交付', perm: 'delivery:view' }
         },
         {
+          // 交付详情：:orderId 是**订单 ID**（detail/items 接口按订单反查交付单）
+          path: 'delivery/detail/:orderId',
+          name: 'delivery-detail',
+          component: () => import('@/views/DeliveryDetailView.vue'),
+          meta: { title: '交付详情', perm: 'delivery:view' }
+        },
+        {
           path: 'packages',
           name: 'packages',
           component: () => import('@/views/PackagesView.vue'),

@@ -60,6 +60,23 @@ function progressOf(d: DeliveryListItem) {
   return 0
 }
 
+/**
+ * 进入交付详情。路由参数是**订单 ID**（detail/items 接口按订单反查交付单），
+ * 不要把交付单主键 d.id 传进去，否则详情页会 40400「交付单不存在」。
+ * 顺手把看板已有的订单快照透传过去，详情页页头无需再打一次订单详情接口。
+ */
+function goDetail(d: DeliveryListItem) {
+  router.push({
+    path: `/delivery/detail/${d.order_id}`,
+    query: {
+      order_code: d.order_code || '',
+      package_name: d.package_name || '',
+      shoot_date: d.shoot_date || '',
+      customer_name: d.customer_name || ''
+    }
+  })
+}
+
 /* ── 新建交付任务 ─────────────────────────────── */
 const createOpen = ref(false)
 const creating = ref(false)
@@ -305,9 +322,11 @@ async function confirmDelivered(d: DeliveryListItem) {
               <span v-else>负责人 {{ d.operator_id ? `#${d.operator_id}` : '未指派' }}</span>
               <span v-if="d.remark" class="muted" :title="d.remark">备注</span>
             </div>
-            <div class="task-actions" v-perm="'delivery:update'">
+            <div class="task-actions">
+              <button class="btn btn-sm btn-outline" @click="goDetail(d)">查看详情</button>
               <button
                 v-if="d.stage === DELIVERY_STAGE.PENDING_SAMPLES"
+                v-perm="'delivery:update'"
                 class="btn btn-sm btn-primary"
                 @click="openUpload(d, 'sample')"
               >
@@ -315,6 +334,7 @@ async function confirmDelivered(d: DeliveryListItem) {
               </button>
               <button
                 v-else-if="d.stage === DELIVERY_STAGE.RETOUCHING"
+                v-perm="'delivery:update'"
                 class="btn btn-sm btn-primary"
                 @click="openUpload(d, 'retouched')"
               >
@@ -322,13 +342,19 @@ async function confirmDelivered(d: DeliveryListItem) {
               </button>
               <button
                 v-else-if="d.stage === DELIVERY_STAGE.PENDING_CONFIRM"
+                v-perm="'delivery:update'"
                 class="btn btn-sm btn-primary"
                 :disabled="busyId === d.id"
                 @click="confirmDelivered(d)"
               >
                 标记交付
               </button>
-              <button class="btn btn-sm btn-outline" :disabled="busyId === d.id" @click="remind(d)">
+              <button
+                v-perm="'delivery:update'"
+                class="btn btn-sm btn-outline"
+                :disabled="busyId === d.id"
+                @click="remind(d)"
+              >
                 提醒负责人
               </button>
             </div>

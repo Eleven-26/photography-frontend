@@ -4,6 +4,7 @@ import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as packageApi from '@/api/packages'
+import { uploadFiles } from '@/api/upload'
 import { useFetch } from '@/composables/useFetch'
 import type { Package } from '@/types'
 import { PACKAGE_STATUS, PACKAGE_STATUS_LABEL } from '@/types'
@@ -20,6 +21,9 @@ const saving = ref(false)
 const editingId = ref(0)
 const form = reactive({
   name: '',
+  // 套餐封面图（biz_package.cover）：客户在 H5 首页「精选服务」与套餐详情页看到的头图。
+  // 对外物料 → 上传必须 public=1（落免鉴权 /media），否则未登录浏览者看不到。
+  cover: '',
   category: '',
   base_price: 0,
   // 定金比例：后端是**百分数**（DDL `decimal(5,2) DEFAULT 30.00` 注释「定金比例(%)」，
@@ -35,6 +39,7 @@ const form = reactive({
 function resetForm() {
   Object.assign(form, {
     name: '',
+    cover: '',
     category: '',
     base_price: 0,
     deposit_rate: 0,
@@ -55,6 +60,7 @@ function openCreate() {
 function openEdit(p: Package) {
   Object.assign(form, {
     name: p.name || '',
+    cover: p.cover || '',
     category: p.category || '',
     base_price: p.base_price ?? 0,
     deposit_rate: p.deposit_rate ?? 0,
@@ -108,6 +114,37 @@ async function toggleStatus(p: Package) {
   }
 }
 
+/* ── 套餐封面上传 ─────────────────────────────── */
+const uploadingCover = ref(false)
+const coverInput = ref<HTMLInputElement | null>(null)
+
+/** 站内相对路径（/media、/uploads）与外链都算已设置；空串/异常值视为未设置 */
+const isImageUrl = (u?: string) => !!u && (/^(https?:)?\/\//.test(u) || u.startsWith('/'))
+
+function openCoverPicker() {
+  coverInput.value?.click()
+}
+
+async function onPickCover(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = '' // 复位，保证连续选同一文件也能触发 change
+  if (!files.length) return
+  uploadingCover.value = true
+  try {
+    // public=1：封面是客户侧（H5 未登录）也要看的对外物料，必须落免鉴权 /media
+    const { results, errors } = await uploadFiles(files.slice(0, 1), 'package', 0, true)
+    if (!results.length) {
+      toastErr(errors[0]?.message || '封面上传失败')
+      return
+    }
+    form.cover = results[0].url
+    toastOk('封面已上传')
+  } finally {
+    uploadingCover.value = false
+  }
+}
+
 const statusTone: Record<number, string> = {
   [PACKAGE_STATUS.DRAFT]: 'status-disabled',
   [PACKAGE_STATUS.ACTIVE]: 'status-ok',
@@ -146,6 +183,13 @@ const statusTone: Record<number, string> = {
             {{ PACKAGE_STATUS_LABEL[p.status] || p.status }}
           </span>
         </div>
+        <div
+          class="pkg-cover"
+          :class="{ 'is-empty': !isImageUrl(p.cover) }"
+          :style="isImageUrl(p.cover) ? { backgroundImage: `url(${p.cover})` } : undefined"
+        >
+          <span v-if="!isImageUrl(p.cover)">未设置封面</span>
+        </div>
         <h3 class="serif" style="margin: 13px 0 4px; font-size: 18px">{{ p.name }}</h3>
         <div class="pkg-price">
           <b>¥{{ p.base_price.toLocaleString() }}</b>
@@ -181,6 +225,40 @@ const statusTone: Record<number, string> = {
       @close="addOpen = false"
     >
       <form id="modal-form" class="form-grid form-grid-2" @submit.prevent="savePackage">
+        <div class="field" style="grid-column: 1 / -1">
+          <label class="field-label">套餐封面</label>
+          <div class="up-row">
+            <div
+              class="up-thumb"
+              :class="{ 'is-empty': !isImageUrl(form.cover) }"
+              :style="isImageUrl(form.cover) ? { backgroundImage: `url(${form.cover})` } : undefined"
+            >
+              <span v-if="!isImageUrl(form.cover)">未设置</span>
+            </div>
+            <div class="up-side">
+              <div class="up-btns">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline"
+                  :disabled="uploadingCover"
+                  @click="openCoverPicker"
+                >
+                  {{ uploadingCover ? '上传中…' : form.cover ? '更换封面' : '上传封面' }}
+                </button>
+                <button
+                  v-if="form.cover"
+                  type="button"
+                  class="btn btn-sm btn-ghost"
+                  @click="form.cover = ''"
+                >
+                  移除
+                </button>
+              </div>
+              <p class="up-hint">展示在 H5 首页「精选服务」与套餐详情页顶部；建议 3:2 横图</p>
+            </div>
+          </div>
+          <input ref="coverInput" type="file" accept="image/*" class="up-input" @change="onPickCover" />
+        </div>
         <div class="field">
           <label class="field-label"><span class="req">*</span> 套餐名称</label>
           <input v-model="form.name" class="input" placeholder="如 婚礼跟拍" />
@@ -255,5 +333,72 @@ const statusTone: Record<number, string> = {
   gap: 8px;
   flex: none;
   margin-left: 12px;
+}
+
+/* 卡片封面：无封面时给同色系占位底纹，避免高度塌陷导致卡片参差 */
+.pkg-cover {
+  margin-top: 12px;
+  height: 132px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background-position: center;
+  background-size: cover;
+}
+
+.pkg-cover.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--muted);
+  background: linear-gradient(160deg, #e7e2d8, #c9c2b4);
+}
+
+/* 封面上传（规格与 PortfolioView 的 up-* 一致，两处保持同一套观感） */
+.up-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.up-thumb {
+  flex-shrink: 0;
+  width: 96px;
+  height: 64px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background-position: center;
+  background-size: cover;
+}
+
+.up-thumb.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--muted);
+  background: linear-gradient(160deg, #e7e2d8, #c9c2b4);
+}
+
+.up-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.up-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.up-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.up-input {
+  display: none;
 }
 </style>

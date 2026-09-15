@@ -52,6 +52,11 @@ export function studioGet() {
 export interface StudioUpdateParams {
   slogan?: string
   intro?: string
+  /**
+   * 分享封面图（预约主页 / 分享页顶部大图）。
+   * 后端按「指针非 nil 才更新」判定，故传空串 `''` 即**清空封面**，省略该键则不改动。
+   */
+  cover_url?: string
   homepage_slug?: string
   accept_new?: number
   lock_minutes?: number
