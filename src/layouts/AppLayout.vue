@@ -5,8 +5,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import { initials, relativeTime } from '@/utils/format'
 import * as notifApi from '@/api/notifications'
+import * as settingsApi from '@/api/settings'
 import { NOTIFICATION_TYPE } from '@/constants/enums'
-import type { Notification } from '@/types'
+import { PERM } from '@/constants/permissions'
+import type { Notification, Workspace } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
@@ -19,6 +21,15 @@ const userName = computed(() => auth.user?.nickname || auth.user?.username || '�
 const userRole = computed(() => auth.user?.role_name || '主理人')
 
 const query = ref('')
+
+/* ── 当前工作空间（公司 + 门店）：多门店/改名后随接口更新，失败保留兜底文案 ── */
+const workspace = ref<Workspace | null>(null)
+const companyName = computed(() => workspace.value?.company?.name || 'SLOT 摄影工作室')
+const storeLine = computed(() => {
+  const city = workspace.value?.company?.city
+  const store = workspace.value?.stores?.[0]?.name
+  return [city, store].filter(Boolean).join(' · ') || '未设置门店'
+})
 
 /* ── 通知中心 ─────────────────────────────────── */
 const notifOpen = ref(false)
@@ -90,6 +101,14 @@ async function readAll() {
 onMounted(() => {
   void loadUnread()
   timer = setInterval(loadUnread, 60000)
+  settingsApi
+    .workspace()
+    .then((w) => {
+      workspace.value = w
+    })
+    .catch(() => {
+      /* 顶栏信息失败不打断主流程，保留兜底文案 */
+    })
 })
 
 onBeforeUnmount(() => {
@@ -114,7 +133,7 @@ const navGroupsRaw: NavGroup[] = [
   {
     label: '工作台',
     items: [
-      { path: '/dashboard', title: '工作台', icon: 'M3 11.5 12 4l9 7.5', count: null, perm: 'dashboard:view' }
+      { path: '/dashboard', title: '工作台', icon: 'M3 11.5 12 4l9 7.5', count: null, perm: PERM.dashboardView }
     ]
   },
   {
@@ -122,26 +141,26 @@ const navGroupsRaw: NavGroup[] = [
     // 顺序约定（2026-09-14 用户拍板）：客户 → 线索 → 定制需求 → 订单。
     // 按"从获客到成交"的动线排列，定制需求紧邻订单（它是下单前的一条转化入口）。
     items: [
-      { path: '/customers', title: '客户管理', icon: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 9a6 6 0 0 0-12 0', count: null, perm: 'customer:view' },
-      { path: '/leads', title: '线索与报价', icon: 'M4 6h16M4 12h16M4 18h10', count: null, perm: 'lead:view' },
-      { path: '/custom-requests', title: '定制需求', icon: 'm12 3 1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3ZM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z', count: null, perm: 'request:view' },
-      { path: '/orders', title: '订单管理', icon: 'M4 5l13 0M4 12l13 0M4 19l9 0', count: null, perm: 'order:view' }
+      { path: '/customers', title: '客户管理', icon: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 9a6 6 0 0 0-12 0', count: null, perm: PERM.customerView },
+      { path: '/leads', title: '线索与报价', icon: 'M4 6h16M4 12h16M4 18h10', count: null, perm: PERM.leadView },
+      { path: '/custom-requests', title: '定制需求', icon: 'm12 3 1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3ZM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z', count: null, perm: PERM.requestView },
+      { path: '/orders', title: '订单管理', icon: 'M4 5l13 0M4 12l13 0M4 19l9 0', count: null, perm: PERM.orderView }
     ]
   },
   {
     label: '排期与服务',
     items: [
-      { path: '/calendar', title: '日程与档期', icon: 'M6 3v3M18 3v3M3.5 8h17', count: null, perm: 'calendar:view' },
-      { path: '/delivery', title: '选片与精修', icon: 'M12 3 5 7v10l7 4 7-4V7l-7-4Z', count: null, perm: 'delivery:view' },
-      { path: '/packages', title: '套餐管理', icon: 'M6 3h12l2 3H4l2-3Zm-1 3h14l-3 14H8L5 6Z', count: null, perm: 'package:view' },
-      { path: '/portfolio', title: '作品集', icon: 'M3 5h18v14H3V5Zm6 0 4-4 4 4', count: null, perm: 'asset:view' }
+      { path: '/calendar', title: '日程与档期', icon: 'M6 3v3M18 3v3M3.5 8h17', count: null, perm: PERM.calendarView },
+      { path: '/delivery', title: '选片与精修', icon: 'M12 3 5 7v10l7 4 7-4V7l-7-4Z', count: null, perm: PERM.deliveryView },
+      { path: '/packages', title: '套餐管理', icon: 'M6 3h12l2 3H4l2-3Zm-1 3h14l-3 14H8L5 6Z', count: null, perm: PERM.packageView },
+      { path: '/portfolio', title: '作品集', icon: 'M3 5h18v14H3V5Zm6 0 4-4 4 4', count: null, perm: PERM.assetView }
     ]
   },
   {
     label: '经营',
     items: [
-      { path: '/finance', title: '财务与对账', icon: 'M6 4h12v16H6V4Zm0 5h12M9 14h6', count: null, perm: 'finance:view' },
-      { path: '/settings', title: '工作室设置', icon: 'm12 3 2 1 2-1 1 2 2 1-1 2 1 2-2 1-1 2-2-1-2 1-1-2-2-1 1-2-1-2 2-1 1-2ZM18 18l1 1', count: null, perm: 'settings:view' }
+      { path: '/finance', title: '财务与对账', icon: 'M6 4h12v16H6V4Zm0 5h12M9 14h6', count: null, perm: PERM.financeView },
+      { path: '/settings', title: '工作室设置', icon: 'm12 3 2 1 2-1 1 2 2 1-1 2 1 2-2 1-1 2-2-1-2 1-1-2-2-1 1-2-1-2 2-1 1-2ZM18 18l1 1', count: null, perm: PERM.settingsView }
     ]
   }
 ]
@@ -194,10 +213,10 @@ function logout() {
       </div>
 
       <button class="space-switch" title="当前工作室">
-        <span class="space-avatar">A</span>
+        <span class="space-avatar">{{ initials(companyName) }}</span>
         <span class="space-copy">
-          <strong>Audi Shiraz</strong>
-          <span>北京 · 朝阳大悦城</span>
+          <strong>{{ companyName }}</strong>
+          <span>{{ storeLine }}</span>
         </span>
         <svg class="icon icon-drop" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
       </button>

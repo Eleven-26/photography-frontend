@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import AppToast from '@/components/AppToast.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import { useFetch } from '@/composables/useFetch'
@@ -8,7 +7,7 @@ import { useStudioSetting } from '@/composables/useStudioSetting'
 import * as assetApi from '@/api/assets'
 import { listPackages } from '@/api/packages'
 import { uploadFiles } from '@/api/upload'
-import { ASSET_STATUS, ASSET_VISIBILITY, ASSET_AUTH } from '@/types'
+import { ASSET_STATUS, ASSET_VISIBILITY, ASSET_AUTH } from '@/constants/enums'
 import type { Asset, Package } from '@/types'
 import { formatDate } from '@/utils/format'
 
@@ -377,7 +376,6 @@ const shareWork = () => sharePortfolio()
 
 <template>
   <div>
-    <AppToast />
 
     <div class="page-head">
       <div>

@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as financeApi from '@/api/finance'
 import { useFetch } from '@/composables/useFetch'
 import { money, formatDateTime } from '@/utils/format'
 import type { Payment, Refund } from '@/types'
-import { PAYMENT_STATUS, PAYMENT_STATUS_LABEL, REFUND_STATUS, REFUND_STATUS_LABEL } from '@/types'
+import { PAYMENT_STATUS, PAYMENT_STATUS_LABEL, REFUND_STATUS, REFUND_STATUS_LABEL } from '@/constants/enums'
 
 // 财务汇总与流水：失败即提示，不回退演示数据、不伪造成功
 const overview = useFetch(() => financeApi.financeSummary())
@@ -114,7 +113,6 @@ async function doAudit(approved: boolean) {
 
 <template>
   <div>
-    <AppToast />
     <div class="page-head">
       <div>
         <h1>财务与对账</h1>

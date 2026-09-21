@@ -1,6 +1,7 @@
 {
   "name": "photography-frontend",
   "private": true,
+  "engines": { "node": ">=18" },
   "version": "1.0.0",
   "type": "module",
   "description": "SLOT 摄影师工作室后台管理前端（Vue3 + TypeScript + 组合式 API）",
@@ -12,6 +13,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "verify": "npm run typecheck && npm run lint",
+    "test": "vitest run",
     "docker:build": "docker build -t chenkangfu/photography-frontend:latest ."
   },
   "dependencies": {
@@ -30,6 +32,7 @@
     "typescript": "~5.6.3",
     "typescript-eslint": "^8.70.0",
     "vite": "^6.0.7",
+    "vitest": "^5.0.1",
     "vue-eslint-parser": "^10.4.1",
     "vue-tsc": "^2.2.0"
   }

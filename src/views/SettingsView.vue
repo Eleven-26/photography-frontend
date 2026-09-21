@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as membersApi from '@/api/members'
@@ -9,13 +8,7 @@ import { uploadFiles } from '@/api/upload'
 import { useFetch } from '@/composables/useFetch'
 import { initials, formatDateTime } from '@/utils/format'
 import type { PaymentMethod, PermGroup, SysRole } from '@/types'
-import {
-  DATA_SCOPE,
-  DATA_SCOPE_HINT,
-  DATA_SCOPE_LABEL,
-  PAYMENT_METHOD_TYPE,
-  PAYMENT_METHOD_TYPE_LABEL
-} from '@/types'
+import { DATA_SCOPE, DATA_SCOPE_HINT, DATA_SCOPE_LABEL, PAYMENT_METHOD_TYPE, PAYMENT_METHOD_TYPE_LABEL } from '@/constants/enums'
 
 const tab = ref<'studio' | 'members' | 'roles' | 'payments' | 'logs'>('studio')
 
@@ -416,7 +409,6 @@ const statusTone: Record<number, string> = {
 
 <template>
   <div>
-    <AppToast />
     <div class="page-head">
       <div>
         <h1>工作室设置</h1>

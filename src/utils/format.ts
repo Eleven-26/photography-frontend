@@ -1,5 +1,7 @@
 // 通用格式化工具
 
+import { ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL, LEAD_STATUS_LABEL, REFUND_STATUS_LABEL, DELIVERY_STAGE_LABEL, CUSTOMER_LEVEL_LABEL } from '@/constants/enums'
+
 export const money = (n?: number | null, withSymbol = true) => {
   const v = Number(n || 0)
   const s = v.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
@@ -51,14 +53,6 @@ export function percent(n?: number | null, digits = 1) {
   return `${Number(n || 0).toFixed(digits)}%`
 }
 
-import {
-  ORDER_STATUS_LABEL,
-  PAYMENT_STATUS_LABEL,
-  LEAD_STATUS_LABEL,
-  REFUND_STATUS_LABEL,
-  DELIVERY_STAGE_LABEL,
-  CUSTOMER_LEVEL_LABEL
-} from '@/types'
 
 /** 订单状态 -> 状态色（int 枚举，见 ORDER_STATUS） */
 export function orderTone(status?: number | null): string {

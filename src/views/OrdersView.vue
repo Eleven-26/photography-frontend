@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as orderApi from '@/api/orders'
@@ -10,18 +9,7 @@ import * as packageApi from '@/api/packages'
 import * as deliveryApi from '@/api/delivery'
 import { useFetch } from '@/composables/useFetch'
 import { money, formatDate, formatDateTime, initials, orderTone } from '@/utils/format'
-import {
-  ORDER_STATUS,
-  ORDER_STATUS_LABEL,
-  ORDER_SOURCE_LABEL,
-  PAYMENT_STATUS,
-  PAYMENT_STATUS_LABEL,
-  PACKAGE_STATUS,
-  RESCHEDULE_STATUS,
-  RESCHEDULE_STATUS_LABEL,
-  RESCHEDULE_FEE_TYPE_LABEL,
-  DELIVERY_STAGE_LABEL
-} from '@/types'
+import { ORDER_STATUS, ORDER_STATUS_LABEL, ORDER_SOURCE_LABEL, PAYMENT_STATUS, PAYMENT_STATUS_LABEL, PACKAGE_STATUS, RESCHEDULE_STATUS, RESCHEDULE_STATUS_LABEL, RESCHEDULE_FEE_TYPE_LABEL, DELIVERY_STAGE_LABEL } from '@/constants/enums'
 import type {
   Order,
   OrderLog,
@@ -505,7 +493,6 @@ async function saveOrder() {
 
 <template>
   <div class="orders">
-    <AppToast />
 
     <div class="page-head">
       <div>

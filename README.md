@@ -38,7 +38,7 @@ npm run verify       # typecheck + lint
 | 文件 | 变量 | 说明 |
 | --- | --- | --- |
 | `.env.development` | `VITE_API_BASE_URL` | Vite 代理目标，默认 `http://localhost:8080` |
-| `.env.production` | `VITE_API_BASE_URL` | 生产值 `/api`；**运行时接口前缀实际由 `src/api/common/apiPath.ts` 的 `API_PREFIX` + Nginx 反代决定，该变量当前不被运行时消费** |
+| `.env.production` | — | 已不再需要 `VITE_API_BASE_URL`：生产接口前缀由 `src/api/common/apiPath.ts` 的 `API_PREFIX`（`/api`）+ Nginx 反代决定 |
 
 ## 目录结构
 
@@ -117,8 +117,9 @@ npm run docker:build   # 构建并打标签 chenkangfu/photography-frontend:late
 
 ## 测试与 CI
 
-- 暂无自动化测试；`npm run verify` = `typecheck + lint`，目前需人工执行。
-- 建议：引入 Vitest + `@vue/test-utils`，优先覆盖 `utils/format`、`composables/useFetch`、`stores/auth` 的 `hasPerm` 分支、`api/common/http` 的拦截器解包，并把 `verify` 接入 CI。
+- `npm run verify` = `typecheck + lint`；`npm test` = Vitest（当前覆盖 `src/utils/format.ts` 纯函数，9 个用例）。
+- CI：`.github/workflows/ci.yml` 在 push/PR 执行 `npm ci → verify → test`。
+- 后续可继续补 `composables/useFetch`、`stores/auth.hasPerm`、`api/common/http` 拦截器用例。
 
 ## 文档与原型
 

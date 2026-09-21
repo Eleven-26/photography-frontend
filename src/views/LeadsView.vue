@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import AppToast from '@/components/AppToast.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import { useFetch } from '@/composables/useFetch'
@@ -9,15 +8,7 @@ import { useStudioSetting } from '@/composables/useStudioSetting'
 import * as leadApi from '@/api/leads'
 import { createOrder } from '@/api/orders'
 import { listPackages } from '@/api/packages'
-import {
-  LEAD_STATUS,
-  LEAD_STATUS_LABEL,
-  QUOTE_STATUS,
-  QUOTE_STATUS_LABEL,
-  BRIEF_ITEM_STATUS,
-  BRIEF_ITEM_STATUS_LABEL,
-  LEAD_MESSAGE_DIRECTION
-} from '@/types'
+import { LEAD_STATUS, LEAD_STATUS_LABEL, QUOTE_STATUS, QUOTE_STATUS_LABEL, BRIEF_ITEM_STATUS, BRIEF_ITEM_STATUS_LABEL, LEAD_MESSAGE_DIRECTION } from '@/constants/enums'
 import type { Lead, LeadBriefItem, LeadMessage, Package, Quote } from '@/types'
 import { money, formatDate, formatDateTime, initials } from '@/utils/format'
 
@@ -391,7 +382,6 @@ async function copyBookingLink() {
 
 <template>
   <div>
-    <AppToast />
 
     <div class="page-head">
       <div>

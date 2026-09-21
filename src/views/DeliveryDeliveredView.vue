@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import AppToast from '@/components/AppToast.vue'
 import * as deliveryApi from '@/api/delivery'
 import { useFetch } from '@/composables/useFetch'
 import { formatDate } from '@/utils/format'
 import type { DeliveryListItem } from '@/types'
-import { DELIVERY_STAGE } from '@/types'
+import { DELIVERY_STAGE } from '@/constants/enums'
 
 /**
  * 已交付列表（DELIVERY_STAGE.DELIVERED = 5）。
@@ -57,7 +56,6 @@ function openDetail(d: DeliveryListItem) {
 
 <template>
   <div>
-    <AppToast />
     <div class="page-head">
       <div>
         <h1>已交付</h1>

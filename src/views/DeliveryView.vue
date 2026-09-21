@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as deliveryApi from '@/api/delivery'
@@ -11,7 +10,7 @@ import { uploadFiles } from '@/api/upload'
 import { useFetch } from '@/composables/useFetch'
 import { formatDate } from '@/utils/format'
 import type { DeliveryListItem, Order, SysUser } from '@/types'
-import { DELIVERY_STAGE, DELIVERY_STAGE_LABEL } from '@/types'
+import { DELIVERY_STAGE, DELIVERY_STAGE_LABEL } from '@/constants/enums'
 
 const router = useRouter()
 
@@ -243,7 +242,6 @@ async function confirmDelivered(d: DeliveryListItem) {
 
 <template>
   <div>
-    <AppToast />
     <div class="page-head">
       <div>
         <h1>选片与精修</h1>

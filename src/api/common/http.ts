@@ -28,6 +28,12 @@ export const tokenStore = {
   }
 }
 
+/** 401 统一处理钩子：由 router 注入，避免 api 层用 window.location 整页跳转丢 SPA 状态与未保存表单。 */
+let unauthorizedHandler: ((redirect: string) => void) | null = null
+export function setUnauthorizedHandler(fn: (redirect: string) => void) {
+  unauthorizedHandler = fn
+}
+
 export const http = axios.create({
   baseURL: '',
   timeout: 15000
@@ -53,8 +59,11 @@ http.interceptors.response.use(
   (error: AxiosError<ApiResponse>) => {
     if (error.response?.status === 401) {
       tokenStore.clear()
-      if (window.location.pathname !== '/login') {
-        const from = window.location.pathname + window.location.search
+      const from = window.location.pathname + window.location.search
+      if (unauthorizedHandler) {
+        unauthorizedHandler(from)
+      } else if (window.location.pathname !== '/login') {
+        // 兜底：未注入 router（如单测）时退回整页跳转
         window.location.href = `/login?redirect=${encodeURIComponent(from)}`
       }
       throw new ApiError(401, '登录已失效，请重新登录')
@@ -136,3 +145,14 @@ function filenameFromDisposition(disposition?: string): string {
   const plain = /filename="?([^";]+)"?/i.exec(disposition)
   return plain?.[1] || ''
 }
+
+/** 主键进 body 的写接口（create / update）：id 合并进 body，显式表达契约，替代手写展开 id。 */
+export const rpcBody = <T>(apiPath: string, data: Record<string, unknown>, id?: number | string) =>
+  rpc<T>(apiPath, id != null ? { ...data, id } : data)
+
+/** 主键进 URL 的接口（detail / status / delete）：显式表达路径参数语义。 */
+export const rpcPath = <T>(apiPath: string, id: number | string, data?: unknown) =>
+  rpc<T>(apiPath, data, id)
+
+/** 给请求体补主键的可读 helper（create / update 语义）。 */
+export const withId = <T extends Record<string, unknown>>(data: T, id: number | string) => ({ ...data, id })

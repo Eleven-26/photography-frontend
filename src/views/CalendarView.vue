@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as calendarApi from '@/api/calendar'
 import { useFetch } from '@/composables/useFetch'
 import type { CalendarSlot, SlotTemplate } from '@/types'
-import { BLOCK_STATUS, WEEKDAY_LABEL } from '@/types'
+import { BLOCK_STATUS, WEEKDAY_LABEL } from '@/constants/enums'
 
 const days = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -260,7 +259,6 @@ function reloadAll() {
 
 <template>
   <div>
-    <AppToast />
 
     <div class="page-head">
       <div>

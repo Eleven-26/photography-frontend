@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import AppToast from '@/components/AppToast.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import * as deliveryApi from '@/api/delivery'
 import { uploadFiles } from '@/api/upload'
 import { formatDate, formatDateTime, money } from '@/utils/format'
 import type { Delivery, DeliveryItem } from '@/types'
-import { DELIVERY_STAGE, DELIVERY_STAGE_LABEL } from '@/types'
+import { DELIVERY_STAGE, DELIVERY_STAGE_LABEL } from '@/constants/enums'
 
 /**
  * 交付详情页（选片 / 精修 / 交付的全过程）。
@@ -236,7 +235,6 @@ function goOrder() {
 
 <template>
   <div>
-    <AppToast />
     <div class="page-head">
       <div>
         <h1>交付详情</h1>

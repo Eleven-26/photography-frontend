@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import AppToast from '@/components/AppToast.vue'
 import * as dashboardApi from '@/api/dashboard'
 import * as orderApi from '@/api/orders'
 import { useFetch } from '@/composables/useFetch'
@@ -36,7 +35,6 @@ const todoTone: Record<string, string> = {
 
 <template>
   <div class="dashboard">
-    <AppToast />
 
     <div class="page-head">
       <div>

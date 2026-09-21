@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import AppToast from '@/components/AppToast.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import { useFetch } from '@/composables/useFetch'
@@ -9,7 +8,7 @@ import * as crApi from '@/api/customRequests'
 import { listPackages } from '@/api/packages'
 import { listUsers } from '@/api/members'
 import { formatDateTime, formatDate, initials, money } from '@/utils/format'
-import { CUSTOM_REQUEST_STATUS, CUSTOM_REQUEST_STATUS_LABEL, PACKAGE_STATUS } from '@/types'
+import { CUSTOM_REQUEST_STATUS, CUSTOM_REQUEST_STATUS_LABEL, PACKAGE_STATUS } from '@/constants/enums'
 import type { CustomRequest, Package } from '@/types'
 
 const router = useRouter()
@@ -217,7 +216,6 @@ const customerHint = computed(() => {
 
 <template>
   <div>
-    <AppToast />
 
     <div class="page-head">
       <div>

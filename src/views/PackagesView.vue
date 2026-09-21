@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as packageApi from '@/api/packages'
 import { uploadFiles } from '@/api/upload'
 import { useFetch } from '@/composables/useFetch'
 import type { Package } from '@/types'
-import { PACKAGE_STATUS, PACKAGE_STATUS_LABEL } from '@/types'
+import { PACKAGE_STATUS, PACKAGE_STATUS_LABEL } from '@/constants/enums'
 
 const query = reactive({ page: 1, page_size: 60 })
 
@@ -154,7 +153,6 @@ const statusTone: Record<number, string> = {
 
 <template>
   <div>
-    <AppToast />
     <div class="page-head">
       <div>
         <h1>套餐管理</h1>

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { tokenStore } from '@/api/common/http'
+import { setUnauthorizedHandler, tokenStore } from '@/api/common/http'
 import { useAuthStore } from '@/stores/auth'
+import { PERM } from '@/constants/permissions'
 
 // 路由元信息扩展：perm 声明进入该路由所需的权限点（见后端 internal/domain/perm.go）。
 // 无 perm 的路由不做权限判定（如登录页、403 页、工作台兜底）。
@@ -39,89 +40,98 @@ const router = createRouter({
           path: 'dashboard',
           name: 'dashboard',
           component: () => import('@/views/DashboardView.vue'),
-          meta: { title: '工作台', perm: 'dashboard:view' }
+          meta: { title: '工作台', perm: PERM.dashboardView }
         },
         {
           path: 'orders',
           name: 'orders',
           component: () => import('@/views/OrdersView.vue'),
-          meta: { title: '订单管理', perm: 'order:view' }
+          meta: { title: '订单管理', perm: PERM.orderView }
         },
         {
           path: 'custom-requests',
           name: 'custom-requests',
           component: () => import('@/views/CustomRequestsView.vue'),
-          meta: { title: '定制需求', perm: 'request:view' }
+          meta: { title: '定制需求', perm: PERM.requestView }
         },
         {
           path: 'leads',
           name: 'leads',
           component: () => import('@/views/LeadsView.vue'),
-          meta: { title: '线索与报价', perm: 'lead:view' }
+          meta: { title: '线索与报价', perm: PERM.leadView }
         },
         {
           path: 'calendar',
           name: 'calendar',
           component: () => import('@/views/CalendarView.vue'),
-          meta: { title: '日程与档期', perm: 'calendar:view' }
+          meta: { title: '日程与档期', perm: PERM.calendarView }
         },
         {
           path: 'customers',
           name: 'customers',
           component: () => import('@/views/CustomersView.vue'),
-          meta: { title: '客户管理', perm: 'customer:view' }
+          meta: { title: '客户管理', perm: PERM.customerView }
         },
         {
           path: 'delivery',
           name: 'delivery',
           component: () => import('@/views/DeliveryView.vue'),
-          meta: { title: '选片与精修', perm: 'delivery:view' }
+          meta: { title: '选片与精修', perm: PERM.deliveryView }
         },
         {
           // 已交付归档：看板只渲染 stage 1-4，已交付(5)在此页展示
           path: 'delivery/delivered',
           name: 'delivery-delivered',
           component: () => import('@/views/DeliveryDeliveredView.vue'),
-          meta: { title: '已交付', perm: 'delivery:view' }
+          meta: { title: '已交付', perm: PERM.deliveryView }
         },
         {
           // 交付详情：:orderId 是**订单 ID**（detail/items 接口按订单反查交付单）
           path: 'delivery/detail/:orderId',
           name: 'delivery-detail',
           component: () => import('@/views/DeliveryDetailView.vue'),
-          meta: { title: '交付详情', perm: 'delivery:view' }
+          meta: { title: '交付详情', perm: PERM.deliveryView }
         },
         {
           path: 'packages',
           name: 'packages',
           component: () => import('@/views/PackagesView.vue'),
-          meta: { title: '套餐管理', perm: 'package:view' }
+          meta: { title: '套餐管理', perm: PERM.packageView }
         },
         {
           path: 'portfolio',
           name: 'portfolio',
           component: () => import('@/views/PortfolioView.vue'),
-          meta: { title: '作品集', perm: 'asset:view' }
+          meta: { title: '作品集', perm: PERM.assetView }
         },
         {
           path: 'finance',
           name: 'finance',
           component: () => import('@/views/FinanceView.vue'),
-          meta: { title: '财务与对账', perm: 'finance:view' }
+          meta: { title: '财务与对账', perm: PERM.financeView }
         },
         {
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/SettingsView.vue'),
-          meta: { title: '工作室设置', perm: 'settings:view' }
+          meta: { title: '工作室设置', perm: PERM.settingsView }
         }
       ]
     },
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/dashboard'
+      name: 'not-found',
+      component: () => import('@/views/NotFoundView.vue'),
+      meta: { title: '页面不存在' }
     }
   ]
+})
+
+// 401 由 http 层回调 router 处理：避免 api 层整页跳转丢失 SPA 状态与未保存表单
+setUnauthorizedHandler((from) => {
+  if (router.currentRoute.value.path !== '/login') {
+    router.replace({ name: 'login', query: from && from !== '/' ? { redirect: from } : {} })
+  }
 })
 
 router.beforeEach(async (to) => {

@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { reactive, ref, watch, computed } from 'vue'
-import AppToast from '@/components/AppToast.vue'
 import { toastOk, toastErr } from '@/composables/useToast'
 import BaseModal from '@/components/BaseModal.vue'
 import * as customersApi from '@/api/customers'
 import { useFetch } from '@/composables/useFetch'
 import { money, initials } from '@/utils/format'
 import type { Customer } from '@/types'
-import { CUSTOMER_LEVEL_LABEL, CUSTOMER_STATUS_LABEL } from '@/types'
-import { CUSTOMER_LEVEL, CUSTOMER_STATUS } from '@/types'
+import { CUSTOMER_LEVEL_LABEL, CUSTOMER_STATUS_LABEL } from '@/constants/enums'
+import { CUSTOMER_LEVEL, CUSTOMER_STATUS } from '@/constants/enums'
 
 const STATUS_LABEL = CUSTOMER_STATUS_LABEL
 
@@ -133,7 +132,6 @@ async function saveCustomer() {
 
 <template>
   <div>
-    <AppToast />
     <div class="page-head">
       <div>
         <h1>客户管理</h1>
