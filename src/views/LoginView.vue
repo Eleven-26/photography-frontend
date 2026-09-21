@@ -12,7 +12,7 @@ const form = reactive({ username: '', password: '' })
 const busy = ref(false)
 const error = ref('')
 const hint = ref(
-  '默认账号：admin / admin123456。后端为独立服务（Go · Gin），未启动时无法登录。'
+  import.meta.env.DEV ? '默认账号：admin / admin123456。后端为独立服务（Go · Gin），未启动时无法登录。' : ''
 )
 
 async function submit() {
@@ -85,7 +85,7 @@ async function submit() {
       </form>
 
       <p v-if="error" class="login-error">{{ error }}</p>
-      <div class="login-hint">{{ hint }}</div>
+      <div v-if="hint" class="login-hint">{{ hint }}</div>
     </div>
 
     <p class="login-foot">SLOT Studio OS · 2026 · Photography Management</p>
